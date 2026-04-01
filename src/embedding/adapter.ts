@@ -2,15 +2,15 @@ import { FlagEmbedding, EmbeddingModel } from 'fastembed';
 import { logger } from '../logger';
 import { embeddingLatencySeconds } from '../metrics';
 
-// Known vector dimensions per model (for early validation)
+// Known vector dimensions per fastembed v1/v2 supported models
 const MODEL_DIMS: Record<string, number> = {
   'fast-bge-small-en-v1.5': 384,
   'fast-bge-base-en-v1.5': 768,
-  'fast-bge-large-en-v1.5': 1024,
   'fast-all-MiniLM-L6-v2': 384,
   'fast-bge-small-en': 384,
   'fast-bge-base-en': 768,
   'fast-bge-small-zh-v1.5': 512,
+  'fast-multilingual-e5-large': 1024,
 };
 
 export class EmbeddingAdapter {
@@ -29,20 +29,19 @@ export class EmbeddingAdapter {
     this.log.info({ model: this._modelName }, 'Loading FastEmbed model');
 
     this.model = await FlagEmbedding.init({
-      model: this._modelName as Exclude<EmbeddingModel, EmbeddingModel.CUSTOM>,
+      model: this._modelName as EmbeddingModel,
       cacheDir: process.env['MODEL_CACHE_DIR'] ?? './models',
     });
 
     // Detect vector dimension by embedding a probe string
     const probe = 'dimension probe';
     const gen = this.model.embed([probe], 1);
-    const first = await gen[Symbol.asyncIterator]().next();
+    const first = await gen.next();
     if (first.done || !first.value) {
       // Fall back to known dimensions map
       this._vectorSize = MODEL_DIMS[this._modelName] ?? 384;
     } else {
-      const firstBatch = first.value as number[][];
-      this._vectorSize = firstBatch[0]?.length ?? (MODEL_DIMS[this._modelName] ?? 384);
+      this._vectorSize = first.value[0]?.length ?? (MODEL_DIMS[this._modelName] ?? 384);
     }
 
     this.log.info({ model: this._modelName, vectorSize: this._vectorSize }, 'Model ready');
@@ -69,7 +68,6 @@ export class EmbeddingAdapter {
   }
 
   async embedQuery(query: string): Promise<number[]> {
-    const vector = await this.model.queryEmbed(query);
-    return Array.from(vector as Float32Array | number[]);
+    return this.model.queryEmbed(query);
   }
 }
