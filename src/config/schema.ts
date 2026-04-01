@@ -13,7 +13,7 @@ const RepoConfigSchema = z.object({
 const AppConfigSchema = z.object({
   qdrantUrl: z.string().url().default('http://localhost:6333'),
   qdrantApiKey: z.string().optional(),
-  embeddingModel: z.string().default('BAAI/bge-small-en-v1.5'),
+  embeddingModel: z.string().default('fast-bge-small-en-v1.5'),
   chunkMaxLines: z.number().int().positive().default(150),
   chunkOverlapLines: z.number().int().nonnegative().default(20),
   embeddingBatchSize: z.number().int().positive().default(64),

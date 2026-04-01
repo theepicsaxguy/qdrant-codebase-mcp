@@ -1,5 +1,5 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
-import type { Filter, PointStruct } from '@qdrant/js-client-rest';
+import type { Schemas } from '@qdrant/js-client-rest';
 import * as path from 'path';
 import { v5 as uuidv5 } from 'uuid';
 import { logger } from '../logger';
@@ -104,7 +104,7 @@ export class QdrantAdapter {
       payload: Record<string, unknown>;
     }>
   ): Promise<void> {
-    const processed: PointStruct[] = points.map((p) => {
+    const processed: Array<{ id: string; vector: number[]; payload: Record<string, unknown> }> = points.map((p) => {
       const filePath = p.payload['filePath'] as string | undefined;
       const pathSegments = filePath ? buildPathSegments(filePath) : {};
       return {
@@ -136,10 +136,10 @@ export class QdrantAdapter {
       };
     });
 
-    const filter: Filter =
+    const filter: Schemas['Filter'] =
       filters.length === 1
-        ? (filters[0] as Filter)
-        : ({ should: filters } as unknown as Filter);
+        ? (filters[0] as Schemas['Filter'])
+        : ({ should: filters } as unknown as Schemas['Filter']);
 
     await this.client.delete(this.collectionName, { filter, wait: true });
     this.log.debug({ count: filePaths.length }, 'Deleted chunks by file path');
@@ -259,10 +259,10 @@ export class QdrantAdapter {
       mustConditions.push({ key: 'language', match: { value: language } });
     }
 
-    const filter: Filter = {
+    const filter: Schemas['Filter'] = {
       must_not: mustNotConditions,
       ...(mustConditions.length > 0 ? { must: mustConditions } : {}),
-    } as Filter;
+    } as Schemas['Filter'];
 
     const result = await this.client.query(this.collectionName, {
       query: queryVector,

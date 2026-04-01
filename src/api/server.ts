@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { registry } from '../metrics';
 import { logger } from '../logger';
 import type { AppConfig } from '../config/schema';
@@ -133,34 +133,36 @@ export async function buildServer(
     }
   );
 
-  // --- Search ---
-
-  const handleSearch = async (
+  // Internal helper — returns typed response tuple
+  const buildSearchResponse = async (
     body: unknown,
-    repoIdOverride: string | undefined,
-    reply: Parameters<Parameters<typeof server.post>[1]>[1]
-  ) => {
+    repoIdOverride: string | undefined
+  ): Promise<{ code: number; payload: unknown }> => {
     const parse = SearchBodySchema.safeParse(body);
     if (!parse.success) {
-      return reply.code(400).send({ error: 'Invalid request', details: parse.error.issues });
+      return { code: 400, payload: { error: 'Invalid request', details: parse.error.issues } };
     }
     const req = { ...parse.data, repoId: repoIdOverride ?? parse.data.repoId };
     try {
       const result = await searchService.search(req);
-      return reply.code(200).send(result);
+      return { code: 200, payload: result };
     } catch (err) {
       logger.error({ err }, 'Search error');
-      return reply.code(500).send({ error: 'Search failed', detail: String(err) });
+      return { code: 500, payload: { error: 'Search failed', detail: String(err) } };
     }
   };
 
-  server.post('/search', async (req, reply) =>
-    handleSearch(req.body, undefined, reply)
-  );
+  server.post('/search', async (req, reply: FastifyReply) => {
+    const res = await buildSearchResponse(req.body, undefined);
+    return reply.code(res.code).send(res.payload);
+  });
 
   server.post<{ Params: { repoId: string } }>(
     '/repos/:repoId/search',
-    async (req, reply) => handleSearch(req.body, req.params.repoId, reply)
+    async (req, reply: FastifyReply) => {
+      const res = await buildSearchResponse(req.body, req.params.repoId);
+      return reply.code(res.code).send(res.payload);
+    }
   );
 
   return server;

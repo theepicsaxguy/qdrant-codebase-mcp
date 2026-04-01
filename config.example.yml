@@ -1,6 +1,6 @@
 qdrantUrl: http://localhost:6333
 # qdrantApiKey: ""
-embeddingModel: BAAI/bge-small-en-v1.5
+embeddingModel: fast-bge-small-en-v1.5
 chunkMaxLines: 150
 chunkOverlapLines: 20
 embeddingBatchSize: 64
