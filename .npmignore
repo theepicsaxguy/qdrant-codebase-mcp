@@ -1,0 +1,33 @@
+# Source files (compiled output in dist/ is what gets published)
+src/
+tests/
+
+# Config & dev tooling
+tsconfig.json
+.eslintrc*
+.prettierrc*
+.editorconfig
+*.config.ts
+*.config.js
+
+# Local runtime data
+config.yml
+models/
+*.log
+*.pid
+
+# VS Code workspace settings
+.vscode/
+
+# Docs & templates (not needed at runtime)
+program.md
+mcp.template.json
+config.example.yml
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db

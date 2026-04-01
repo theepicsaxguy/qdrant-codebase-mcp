@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const RepoConfigSchema = z.object({
+export const RepoConfigSchema = z.object({
   repoId: z.string().min(1),
   collectionName: z.string().min(1),
   rootPath: z.string().min(1),
@@ -10,7 +10,7 @@ const RepoConfigSchema = z.object({
   language: z.string().optional(),
 });
 
-const AppConfigSchema = z.object({
+export const AppConfigSchema = z.object({
   qdrantUrl: z.string().url().default('http://localhost:6333'),
   qdrantApiKey: z.string().optional(),
   embeddingModel: z.string().default('fast-bge-small-en-v1.5'),
@@ -26,4 +26,3 @@ const AppConfigSchema = z.object({
 
 export type RepoConfig = z.infer<typeof RepoConfigSchema>;
 export type AppConfig = z.infer<typeof AppConfigSchema>;
-export { AppConfigSchema };

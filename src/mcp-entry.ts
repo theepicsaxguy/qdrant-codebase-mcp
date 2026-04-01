@@ -1,18 +1,38 @@
+#!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { loadConfig } from './config/loader';
+import { bootstrap, startIndexing } from './bootstrap';
 import { createMcpServer } from './mcp/server';
 
 async function main(): Promise<void> {
-  const server = createMcpServer();
+  // Load config — env vars, then config.yml if present, then pure env-var defaults
+  const config = loadConfig();
+
+  // Bootstrap all services — Qdrant, FastEmbed, indexer, search
+  const bundle = await bootstrap(config);
+  startIndexing(bundle);
+
+  // Build MCP server that talks to services directly (no HTTP round-trip)
+  const server = createMcpServer(bundle.searchService, bundle.qdrantAdapters, config, bundle.embedding, bundle.coordinator);
   const transport = new StdioServerTransport();
   await server.connect(transport);
+
+  const repo = config.repos[0];
   process.stderr.write(
-    `[MCP] qdrant-codebase-query MCP server ready (service: ${process.env['SEARCH_SERVICE_URL'] ?? 'http://localhost:3000'})\n`
+    `[qdrant-codebase-query] ready — indexing "${repo?.repoId}" into "${repo?.collectionName}" at ${config.qdrantUrl}\n`
   );
+
+  const shutdown = async () => {
+    await bundle.watcherManager.stopAll();
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => void shutdown());
+  process.on('SIGINT', () => void shutdown());
 }
 
 main().catch((err) => {
   process.stderr.write(
-    `[MCP] Fatal error: ${err instanceof Error ? err.message : String(err)}\n`
+    `[qdrant-codebase-query] Fatal error: ${err instanceof Error ? err.message : String(err)}\n`
   );
   process.exit(1);
 });

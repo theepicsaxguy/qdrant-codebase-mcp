@@ -1,55 +1,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import type { SearchService } from '../search/service';
+import type { QdrantAdapter } from '../qdrant/adapter';
+import type { IndexingCoordinator } from '../indexing/coordinator';
+import type { EmbeddingAdapter } from '../embedding/adapter';
+import type { AppConfig } from '../config/schema';
 
-const SERVICE_URL = (process.env['SEARCH_SERVICE_URL'] ?? 'http://localhost:3000').replace(/\/$/, '');
-
-interface SearchResult {
-  score: number;
-  filePath: string;
-  startLine: number;
-  endLine: number;
-  codeChunk: string;
-  repoId: string;
-}
-
-interface RepoInfo {
-  repoId: string;
-  collectionName: string;
-  rootPath: string;
-}
-
-interface RepoStatus {
-  repoId: string;
-  collectionName: string;
-  model: string;
-  vectorSize: number;
-  indexingInProgress: boolean;
-  status: {
-    indexing_complete: boolean;
-    started_at: number | null;
-    completed_at: number | null;
-    last_error: string | null;
-  };
-}
-
-async function callService<T>(
-  path: string,
-  method: 'GET' | 'POST' | 'DELETE' = 'GET',
-  body?: unknown
-): Promise<T> {
-  const resp = await fetch(`${SERVICE_URL}${path}`, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => resp.statusText);
-    throw new Error(`HTTP ${resp.status} from qdrant-codebase-query: ${text}`);
-  }
-  return resp.json() as Promise<T>;
-}
-
-export function createMcpServer(): McpServer {
+export function createMcpServer(
+  searchService: SearchService,
+  qdrantAdapters: Map<string, QdrantAdapter>,
+  config: AppConfig,
+  embedding: EmbeddingAdapter,
+  coordinator: IndexingCoordinator
+): McpServer {
   const server = new McpServer(
     { name: 'qdrant-codebase-query', version: '0.1.0' },
     { capabilities: {} }
@@ -85,18 +48,22 @@ export function createMcpServer(): McpServer {
         ),
       },
     },
-    async ({ query, repoId, directoryPrefix, language, limit, minScore }) => {
+    async (args: {
+      query: string;
+      repoId?: string;
+      directoryPrefix?: string;
+      language?: string;
+      limit?: number;
+      minScore?: number;
+    }) => {
       try {
-        const path = repoId
-          ? `/repos/${encodeURIComponent(repoId)}/search`
-          : '/search';
-        const result = await callService<{ results: SearchResult[] }>(path, 'POST', {
-          query,
-          repoId,
-          directoryPrefix,
-          language,
-          limit,
-          minScore,
+        const result = await searchService.search({
+          query: args.query,
+          repoId: args.repoId,
+          directoryPrefix: args.directoryPrefix,
+          language: args.language,
+          limit: args.limit ?? 10,
+          minScore: args.minScore ?? 0.45,
         });
 
         if (result.results.length === 0) {
@@ -123,7 +90,7 @@ export function createMcpServer(): McpServer {
           content: [
             {
               type: 'text' as const,
-              text: `Search failed: ${err instanceof Error ? err.message : String(err)}\n\nMake sure qdrant-codebase-query is running at ${SERVICE_URL}`,
+              text: `Search failed: ${err instanceof Error ? err.message : String(err)}`,
             },
           ],
           isError: true,
@@ -141,22 +108,14 @@ export function createMcpServer(): McpServer {
       inputSchema: {},
     },
     async () => {
-      try {
-        const result = await callService<{ repos: RepoInfo[] }>('/repos');
-        const text = result.repos
-          .map((r) => `- **${r.repoId}** — collection: \`${r.collectionName}\`, path: \`${r.rootPath}\``)
-          .join('\n');
-        return {
-          content: [
-            { type: 'text' as const, text: `Available repositories:\n\n${text || '(none)'}` },
-          ],
-        };
-      } catch (err) {
-        return {
-          content: [{ type: 'text' as const, text: `Failed: ${err instanceof Error ? err.message : String(err)}` }],
-          isError: true,
-        };
-      }
+      const text = config.repos
+        .map((r) => `- **${r.repoId}** — collection: \`${r.collectionName}\`, path: \`${r.rootPath}\``)
+        .join('\n');
+      return {
+        content: [
+          { type: 'text' as const, text: `Available repositories:\n\n${text || '(none)'}` },
+        ],
+      };
     }
   );
 
@@ -170,30 +129,38 @@ export function createMcpServer(): McpServer {
         repoId: z.string().describe('The repository ID to check'),
       },
     },
-    async ({ repoId }) => {
+    async (args: { repoId: string }) => {
       try {
-        const r = await callService<RepoStatus>(`/repos/${encodeURIComponent(repoId)}/status`);
-        const s = r.status;
+        const adapter = qdrantAdapters.get(args.repoId);
+        if (!adapter) {
+          return {
+            content: [{ type: 'text' as const, text: `Unknown repo: ${args.repoId}` }],
+            isError: true,
+          };
+        }
+        const s = await adapter.getIndexingStatus();
         const lines = [
-          `**Repo:** ${r.repoId}`,
-          `**Collection:** ${r.collectionName}`,
-          `**Embedding model:** ${r.model} (${r.vectorSize}-dim)`,
-          `**Indexing complete:** ${s.indexing_complete}`,
-          `**Currently indexing:** ${r.indexingInProgress}`,
-          s.started_at
-            ? `**Last started:** ${new Date(s.started_at).toISOString()}`
-            : null,
-          s.completed_at
+          `**Repo:** ${args.repoId}`,
+          `**Embedding model:** ${embedding.modelName} (${embedding.vectorSize}-dim)`,
+          `**Indexing complete:** ${s?.indexing_complete ?? 'unknown'}`,
+          `**Currently indexing:** ${coordinator.isIndexing(args.repoId)}`,
+          s?.started_at ? `**Last started:** ${new Date(s.started_at).toISOString()}` : null,
+          s?.completed_at
             ? `**Last completed:** ${new Date(s.completed_at).toISOString()}`
             : null,
-          s.last_error ? `**Last error:** ${s.last_error}` : null,
+          s?.last_error ? `**Last error:** ${s.last_error}` : null,
         ]
           .filter(Boolean)
           .join('\n');
         return { content: [{ type: 'text' as const, text: lines }] };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Failed: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [
+            {
+              type: 'text' as const,
+              text: `Failed: ${err instanceof Error ? err.message : String(err)}`,
+            },
+          ],
           isError: true,
         };
       }
@@ -211,25 +178,29 @@ export function createMcpServer(): McpServer {
         repoId: z.string().describe('The repository ID to re-index'),
       },
     },
-    async ({ repoId }) => {
-      try {
-        const result = await callService<{ status: string; repoId: string }>(
-          `/repos/${encodeURIComponent(repoId)}/reindex`,
-          'POST'
-        );
+    async (args: { repoId: string }) => {
+      if (!qdrantAdapters.has(args.repoId)) {
         return {
-          content: [
-            { type: 'text' as const, text: `${result.status} for repo "${result.repoId}"` },
-          ],
-        };
-      } catch (err) {
-        return {
-          content: [{ type: 'text' as const, text: `Failed: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Unknown repo: ${args.repoId}` }],
           isError: true,
         };
       }
+      if (coordinator.isIndexing(args.repoId)) {
+        return {
+          content: [{ type: 'text' as const, text: 'Indexing already in progress.' }],
+        };
+      }
+      setImmediate(() => {
+        coordinator.fullIndex(args.repoId).catch(() => undefined);
+      });
+      return {
+        content: [
+          { type: 'text' as const, text: `Re-index started for repo "${args.repoId}"` },
+        ],
+      };
     }
   );
 
   return server;
 }
+

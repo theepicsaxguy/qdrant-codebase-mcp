@@ -2,12 +2,12 @@
   "servers": {
     "qdrant-codebase-query": {
       "type": "stdio",
-      "command": "node",
-      "args": [
-        "/path/to/qdrant-codebase-query/dist/mcp-entry.js"
-      ],
+      "command": "npx",
+      "args": ["-y", "qdrant-codebase-query"],
       "env": {
-        "SEARCH_SERVICE_URL": "http://localhost:3000"
+        "QDRANT_URL": "http://localhost:6333",
+        "QDRANT_API_KEY": "",
+        "ROOT_PATH": "/path/to/your/project"
       }
     }
   }

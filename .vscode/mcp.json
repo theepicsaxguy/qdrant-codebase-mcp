@@ -1,13 +1,27 @@
 {
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "qdrantUrl",
+      "description": "Qdrant server URL",
+      "default": "http://localhost:6333"
+    },
+    {
+      "type": "promptString",
+      "id": "qdrantApiKey",
+      "description": "Qdrant API key (leave empty for local Qdrant)",
+      "password": true
+    }
+  ],
   "servers": {
     "qdrant-codebase-query": {
       "type": "stdio",
-      "command": "node",
-      "args": [
-        "${workspaceFolder}/dist/mcp-entry.js"
-      ],
+      "command": "npx",
+      "args": ["-y", "qdrant-codebase-query"],
       "env": {
-        "SEARCH_SERVICE_URL": "http://localhost:3000"
+        "QDRANT_URL": "${input:qdrantUrl}",
+        "QDRANT_API_KEY": "${input:qdrantApiKey}",
+        "ROOT_PATH": "${workspaceFolder}"
       }
     }
   }

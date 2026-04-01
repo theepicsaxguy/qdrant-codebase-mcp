@@ -1,8 +1,35 @@
 {
   "name": "qdrant-codebase-query",
   "version": "0.1.0",
-  "description": "Production service that continuously indexes code repositories into Qdrant using FastEmbed and exposes semantic vector search",
+  "description": "Semantic code search for AI assistants — indexes your codebase into Qdrant and exposes it as an MCP tool via `npx qdrant-codebase-query`",
   "main": "dist/index.js",
+  "bin": {
+    "qdrant-codebase-query": "./dist/mcp-entry.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "mcp",
+    "qdrant",
+    "semantic-search",
+    "code-search",
+    "embeddings",
+    "fastembed",
+    "ai",
+    "llm",
+    "copilot"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/qdrant-codebase-query.git"
+  },
+  "license": "MIT",
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
@@ -39,6 +66,9 @@
     "@typescript-eslint/eslint-plugin": "^8.58.0",
     "@typescript-eslint/parser": "^8.58.0",
     "eslint": "^10.1.0",
+    "eslint-plugin-sonarjs": "^4.0.2",
+    "eslint-plugin-unicorn": "^64.0.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
