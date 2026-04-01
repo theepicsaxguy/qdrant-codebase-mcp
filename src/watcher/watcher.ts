@@ -97,13 +97,13 @@ export class FileWatcherManager {
       const existing = debounceTimers.get(filePath);
       if (existing) {
         clearTimeout(existing);
-        log.info(
+        log.debug(
           { filePath, debounceMs: this.config.watcherDebounceMs },
           'File changed again; resetting debounce timer'
         );
       }
 
-      log.info(
+      log.debug(
         { filePath, debounceMs: this.config.watcherDebounceMs, reason },
         'File event detected; waiting before indexing'
       );
@@ -112,7 +112,7 @@ export class FileWatcherManager {
         filePath,
         setTimeout(() => {
           debounceTimers.delete(filePath);
-          log.info({ filePath, reason }, 'Debounce window complete; processing file event');
+          log.debug({ filePath, reason }, 'Debounce window complete; processing file event');
           action().catch((err) => {
             log.error({ filePath, err }, 'Debounced action failed');
           });

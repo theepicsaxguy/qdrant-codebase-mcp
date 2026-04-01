@@ -3,8 +3,11 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { loadConfig } from './config/loader';
 import { bootstrap, startIndexing } from './bootstrap';
 import { createMcpServer } from './mcp/server';
+import { applyMcpRuntimeDefaults } from './mcp/runtime-defaults';
 
 async function main(): Promise<void> {
+  applyMcpRuntimeDefaults();
+
   // Load config — env vars, then config.yml if present, then pure env-var defaults
   const config = loadConfig();
 
@@ -22,11 +25,6 @@ async function main(): Promise<void> {
   });
   const transport = new StdioServerTransport();
   await server.connect(transport);
-
-  const repo = config.repos[0];
-  process.stderr.write(
-    `[qdrant-codebase-query] ready — indexing "${repo?.repoId}" into "${repo?.collectionName}" at ${config.qdrantUrl}\n`
-  );
 
   const shutdown = async (): Promise<void> => {
     await bundle.watcherManager.stopAll();

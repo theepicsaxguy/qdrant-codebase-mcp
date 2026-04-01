@@ -1,5 +1,6 @@
 npx lint-staged
 npm run typecheck
+npx prettier --check "src/**/*.ts" "tests/**/*.ts"
 
 # ── Changeset guard ─────────────────────────────────────────────────────────
 # If src/ files are staged but no changeset exists, create one now.
