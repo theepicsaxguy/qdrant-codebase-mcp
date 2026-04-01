@@ -10,7 +10,10 @@ describe('chunkCode', () => {
   });
 
   it('returns empty array for whitespace-only content', () => {
-    const result = chunkCode({ repoId: 'r', filePath: 'f.ts', language: 'ts', content: '   \n  ' }, opts);
+    const result = chunkCode(
+      { repoId: 'r', filePath: 'f.ts', language: 'ts', content: '   \n  ' },
+      opts
+    );
     expect(result).toHaveLength(0);
   });
 
@@ -72,7 +75,10 @@ describe('chunkCode', () => {
   it('consecutive chunks overlap by configured lines', () => {
     const overlapOpts = { maxLines: 5, overlapLines: 2 };
     const content = Array.from({ length: 12 }, (_, i) => `line${i + 1}`).join('\n');
-    const result = chunkCode({ repoId: 'r', filePath: 'f.ts', language: 'ts', content }, overlapOpts);
+    const result = chunkCode(
+      { repoId: 'r', filePath: 'f.ts', language: 'ts', content },
+      overlapOpts
+    );
     // chunk[0] endLine=5, chunk[1] startLine should be 4 (advance = 5-2=3)
     expect(result[1]!.startLine).toBe(4);
   });

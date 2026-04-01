@@ -1,16 +1,3 @@
-export interface IndexedChunk {
-  id: string;
-  vector: number[];
-  repoId: string;
-  filePath: string;
-  language: string;
-  codeChunk: string;
-  startLine: number;
-  endLine: number;
-  contentHash: string;
-  updatedAt: number;
-}
-
 /**
  * Typed payload sent to Qdrant for code chunk points.
  * Tightening this to a concrete type lets TypeScript (and VS Code) catch
@@ -32,14 +19,6 @@ export interface QdrantPoint {
   id: string;
   vector: number[];
   payload: CodeChunkPayload;
-}
-
-export interface MetadataPoint {
-  type: 'metadata';
-  indexing_complete: boolean;
-  started_at: number;
-  completed_at: number | null;
-  last_error: string | null;
 }
 
 export interface SearchRequest {
@@ -73,13 +52,6 @@ export interface IndexingStatus {
   last_error: string | null;
 }
 
-export interface FileChangeEvent {
-  type: 'add' | 'change' | 'unlink' | 'rename';
-  filePath: string;
-  oldFilePath?: string;
-  repoId: string;
-}
-
 export interface ChunkInput {
   repoId: string;
   filePath: string;
@@ -96,10 +68,4 @@ export interface Chunk {
   startLine: number;
   endLine: number;
   contentHash: string;
-}
-
-export interface RepoStatusResponse {
-  repoId: string;
-  collectionName: string;
-  status: IndexingStatus;
 }
