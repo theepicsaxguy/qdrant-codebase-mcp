@@ -1,0 +1,8 @@
+{
+  "eslint.useFlatConfig": true,
+  "eslint.validate": ["typescript"],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
+}

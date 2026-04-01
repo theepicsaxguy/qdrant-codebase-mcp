@@ -131,7 +131,7 @@ export default [
       'security/detect-pseudoRandomBytes': 'error',  // use crypto.randomBytes
     },
   },
-  // Tests use their own tsconfig which includes both src and tests
+  // Tests: basic TS parsing (no type-aware project) — tests rules don't need type info
   {
     files: ['tests/**/*.ts'],
     plugins: {
@@ -143,8 +143,6 @@ export default [
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
-        project: './tests/tsconfig.json',
-        tsconfigRootDir: import.meta.dirname,
       },
     },
     rules: {

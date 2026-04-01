@@ -11,6 +11,29 @@ export interface IndexedChunk {
   updatedAt: number;
 }
 
+/**
+ * Typed payload sent to Qdrant for code chunk points.
+ * Tightening this to a concrete type lets TypeScript (and VS Code) catch
+ * shape mismatches at the call site before they reach the wire.
+ */
+export interface CodeChunkPayload {
+  type: 'code';
+  repoId: string;
+  filePath: string;
+  language: string;
+  codeChunk: string;
+  startLine: number;
+  endLine: number;
+  contentHash: string;
+  updatedAt: number;
+}
+
+export interface QdrantPoint {
+  id: string;
+  vector: number[];
+  payload: CodeChunkPayload;
+}
+
 export interface MetadataPoint {
   type: 'metadata';
   indexing_complete: boolean;

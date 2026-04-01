@@ -1,12 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { chunkId, contentHash, detectLanguage, buildPathSegments, safeResolveWithinRoot, normalizePath } from '../../src/utils/hashing';
+import {
+  chunkId,
+  contentHash,
+  detectLanguage,
+  buildPathSegments,
+  safeResolveWithinRoot,
+  normalizePath,
+} from '../../src/utils/hashing';
 import * as path from 'path';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 describe('chunkId', () => {
-  it('returns a 64-char hex string', () => {
+  it('returns a valid UUID string (Qdrant point ID format)', () => {
     const id = chunkId('repo', 'src/a.ts', 1, 10);
-    expect(id).toHaveLength(64);
-    expect(id).toMatch(/^[0-9a-f]{64}$/);
+    expect(id).toHaveLength(36);
+    expect(id).toMatch(UUID_RE);
   });
 
   it('is deterministic', () => {

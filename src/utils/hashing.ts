@@ -2,12 +2,19 @@ import { createHash } from 'crypto';
 import * as path from 'path';
 
 /**
- * Generate a deterministic SHA-256 based point ID (as UUID-like hex string truncated to 32 hex chars).
- * Uses format: sha256(repoId:filePath:startLine:endLine) -> hex string
+ * Generate a deterministic UUID v4-shaped ID for a chunk.
+ * Uses the first 128 bits of SHA-256(repoId:filePath:startLine:endLine) formatted
+ * as a UUID string — the only ID format Qdrant accepts for string point IDs.
  */
-export function chunkId(repoId: string, filePath: string, startLine: number, endLine: number): string {
+export function chunkId(
+  repoId: string,
+  filePath: string,
+  startLine: number,
+  endLine: number
+): string {
   const input = `${repoId}:${filePath}:${startLine}:${endLine}`;
-  return createHash('sha256').update(input).digest('hex');
+  const h = createHash('sha256').update(input).digest('hex').slice(0, 32);
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
 
 /**
@@ -19,35 +26,36 @@ export function contentHash(content: string): string {
 
 /**
  * Detect language from file extension.
+ * Uses Map.get() (not bracket access) to avoid object-injection lint warnings.
  */
-const EXT_TO_LANG: Record<string, string> = {
-  '.cs': 'csharp',
-  '.ts': 'typescript',
-  '.tsx': 'typescript',
-  '.js': 'javascript',
-  '.jsx': 'javascript',
-  '.json': 'json',
-  '.sql': 'sql',
-  '.md': 'markdown',
-  '.yml': 'yaml',
-  '.yaml': 'yaml',
-  '.csproj': 'xml',
-  '.sln': 'text',
-  '.py': 'python',
-  '.go': 'go',
-  '.rs': 'rust',
-  '.java': 'java',
-  '.rb': 'ruby',
-  '.php': 'php',
-  '.sh': 'bash',
-  '.html': 'html',
-  '.css': 'css',
-  '.scss': 'scss',
-};
+const EXT_TO_LANG = new Map<string, string>([
+  ['.cs', 'csharp'],
+  ['.ts', 'typescript'],
+  ['.tsx', 'typescript'],
+  ['.js', 'javascript'],
+  ['.jsx', 'javascript'],
+  ['.json', 'json'],
+  ['.sql', 'sql'],
+  ['.md', 'markdown'],
+  ['.yml', 'yaml'],
+  ['.yaml', 'yaml'],
+  ['.csproj', 'xml'],
+  ['.sln', 'text'],
+  ['.py', 'python'],
+  ['.go', 'go'],
+  ['.rs', 'rust'],
+  ['.java', 'java'],
+  ['.rb', 'ruby'],
+  ['.php', 'php'],
+  ['.sh', 'bash'],
+  ['.html', 'html'],
+  ['.css', 'css'],
+  ['.scss', 'scss'],
+]);
 
 export function detectLanguage(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
-  return EXT_TO_LANG[ext] ?? 'text';
+  return EXT_TO_LANG.get(ext) ?? 'text';
 }
 
 /**
@@ -56,10 +64,7 @@ export function detectLanguage(filePath: string): string {
  */
 export function buildPathSegments(filePath: string): Record<string, string> {
   const segments = filePath.split(/[\\/]/).filter(Boolean);
-  return segments.reduce<Record<string, string>>((acc, seg, i) => {
-    acc[String(i)] = seg;
-    return acc;
-  }, {});
+  return Object.fromEntries(segments.map((seg, i) => [String(i), seg]));
 }
 
 /**

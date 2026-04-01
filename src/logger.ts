@@ -1,14 +1,21 @@
-import pino from 'pino';
+import pino, { type Logger as PinoLogger } from 'pino';
 
-function createLogger() {
+function createLogger(): PinoLogger {
   const isDev = process.env['NODE_ENV'] !== 'production';
-  return pino({
-    level: process.env['LOG_LEVEL'] ?? 'info',
-    transport: isDev
-      ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:standard' } }
-      : undefined,
-    base: { service: 'qdrant-codebase-query' },
-  });
+  // Always write to stderr — stdout is reserved for MCP JSON-RPC protocol messages.
+  return pino(
+    {
+      level: process.env['LOG_LEVEL'] ?? 'info',
+      transport: isDev
+        ? {
+            target: 'pino-pretty',
+            options: { colorize: true, translateTime: 'SYS:standard', destination: 2 },
+          }
+        : undefined,
+      base: { service: 'qdrant-codebase-mcp' },
+    },
+    isDev ? undefined : process.stderr
+  );
 }
 
 export const logger = createLogger();
