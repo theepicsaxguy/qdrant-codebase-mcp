@@ -34,7 +34,7 @@ describe('AppConfigSchema', () => {
     expect(result.data.chunkMaxLines).toBe(150);
     expect(result.data.chunkOverlapLines).toBe(20);
     expect(result.data.port).toBe(3000);
-    expect(result.data.embeddingModel).toBe('BAAI/bge-small-en-v1.5');
+    expect(result.data.embeddingModel).toBe('fast-bge-small-en-v1.5');
   });
 
   it('rejects repo without repoId', () => {
