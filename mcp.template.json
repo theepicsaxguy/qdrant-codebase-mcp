@@ -1,13 +1,33 @@
 {
   "servers": {
-    "qdrant-codebase-query": {
+    "qdrant-codebase-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "qdrant-codebase-query"],
+      "args": ["-y", "qdrant-codebase-mcp"],
       "env": {
         "QDRANT_URL": "http://localhost:6333",
         "QDRANT_API_KEY": "",
         "ROOT_PATH": "/path/to/your/project"
+      }
+    },
+    "webdocuments-search": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/theepicsaxguy/qdrant-codebase-mcp",
+        "qdrant-codebase-mcp"
+      ],
+      "env": {
+        "QDRANT_URL": "http://localhost:6333",
+        "QDRANT_API_KEY": "",
+        "SERVER_MODE": "search-only",
+        "REPO_ID": "webdocuments",
+        "COLLECTION_NAME": "webdocuments",
+        "EMBEDDING_PROVIDER": "openai-compatible",
+        "EMBEDDING_BASE_URL": "https://your-openai-compatible-endpoint/v1",
+        "EMBEDDING_API_KEY": "",
+        "EMBEDDING_MODEL": "text-embedding-3-large"
       }
     }
   }

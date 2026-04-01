@@ -78,3 +78,29 @@ describe('QdrantAdapter.upsertChunks — vector validation', () => {
     expect(Array.isArray(points[0]?.vector)).toBe(true);
   });
 });
+
+describe('QdrantAdapter.validateExistingCollection', () => {
+  it('throws when the collection is missing', async () => {
+    const adapter = makeAdapter();
+
+    await expect(adapter.validateExistingCollection()).rejects.toThrow(
+      'Collection does not exist: test-collection'
+    );
+  });
+
+  it('throws when the existing collection uses a different vector size', async () => {
+    const adapter = makeAdapter();
+    const client = (
+      adapter as unknown as {
+        client: { getCollection: ReturnType<typeof vi.fn> };
+      }
+    ).client;
+    client.getCollection.mockResolvedValue({
+      config: { params: { vectors: { size: 128 } } },
+    });
+
+    await expect(adapter.validateExistingCollection()).rejects.toThrow(
+      'Collection test-collection has vector size 128, expected 384'
+    );
+  });
+});

@@ -114,6 +114,10 @@ function filterBySize(safe: string[], limit: number, log: Logger): string[] {
 }
 
 export async function scanRepo(repo: RepoConfig, maxFileSizeBytes: number): Promise<string[]> {
+  if (!repo.rootPath) {
+    throw new Error(`Repo ${repo.repoId} does not have a rootPath; scanning is unavailable`);
+  }
+
   const log = logger.child({ component: 'FileScanner', repoId: repo.repoId });
   const root = path.resolve(repo.rootPath);
   const include = repo.include ?? DEFAULT_INCLUDE;
@@ -148,6 +152,8 @@ export function isIndexable(
   repo: RepoConfig,
   maxFileSizeBytes: number
 ): boolean {
+  if (!repo.rootPath) return false;
+
   const root = path.resolve(rootPath);
   const abs = path.resolve(filePath);
 

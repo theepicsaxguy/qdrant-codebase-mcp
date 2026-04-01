@@ -1,5 +1,5 @@
 import type { QdrantAdapter } from '../qdrant/adapter';
-import type { EmbeddingAdapter } from '../embedding/adapter';
+import type { EmbeddingAdapter } from '../embedding/types';
 import { logger } from '../logger';
 import { searchRequestsTotal, searchLatencySeconds } from '../metrics';
 import type { SearchRequest, SearchResponse } from '../types';

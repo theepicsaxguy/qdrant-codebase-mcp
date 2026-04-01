@@ -38,6 +38,7 @@ export function registerGetRepoStatusTool(
 
 export function registerTriggerReindexTool(
   server: McpServer,
+  config: AppConfig,
   qdrantAdapters: Map<string, QdrantAdapter>,
   coordinator: IndexingCoordinator
 ): void {
@@ -51,7 +52,8 @@ export function registerTriggerReindexTool(
         repoId: z.string().describe('The repository ID to re-index'),
       },
     },
-    (args: { repoId: string }) => handleTriggerReindex(qdrantAdapters, coordinator, args.repoId)
+    (args: { repoId: string }) =>
+      handleTriggerReindex(config, qdrantAdapters, coordinator, args.repoId)
   );
 }
 
@@ -73,11 +75,16 @@ async function handleGetRepoStatus(
   }
 }
 
-function handleTriggerReindex(
+export function handleTriggerReindex(
+  config: AppConfig,
   qdrantAdapters: Map<string, QdrantAdapter>,
   coordinator: IndexingCoordinator,
   repoId: string
 ): TextToolResponse {
+  if (config.serverMode === 'search-only') {
+    return buildTextResponse('Re-index is unsupported when serverMode is search-only.', true);
+  }
+
   if (!qdrantAdapters.has(repoId)) {
     return buildTextResponse(`Unknown repo: ${repoId}`, true);
   }
@@ -97,7 +104,7 @@ function formatRepos(config: AppConfig): string {
   const text = config.repos
     .map(
       (repo) =>
-        `- **${repo.repoId}** — collection: \`${repo.collectionName}\`, path: \`${repo.rootPath}\``
+        `- **${repo.repoId}** — collection: \`${repo.collectionName}\`, mode: \`${config.serverMode}\`${repo.rootPath ? `, path: \`${repo.rootPath}\`` : ''}`
     )
     .join('\n');
 
@@ -111,6 +118,8 @@ function formatRepoStatus(
 ): string {
   return [
     `**Repo:** ${repoId}`,
+    `**Server mode:** ${dependencies.config.serverMode}`,
+    `**Embedding provider:** ${dependencies.embedding.provider}`,
     `**Embedding model:** ${dependencies.embedding.modelName} (${dependencies.embedding.vectorSize}-dim)`,
     `**Indexing complete:** ${status?.indexing_complete ?? 'unknown'}`,
     `**Currently indexing:** ${dependencies.coordinator.isIndexing(repoId)}`,

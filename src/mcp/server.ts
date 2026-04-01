@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppConfig } from '../config/schema';
-import type { EmbeddingAdapter } from '../embedding/adapter';
+import type { EmbeddingAdapter } from '../embedding/types';
 import type { IndexingCoordinator } from '../indexing/coordinator';
 import {
   registerGetRepoStatusTool,
@@ -28,7 +28,12 @@ export function createMcpServer(dependencies: McpServerDependencies): McpServer 
   registerSearchCodeTool(server, dependencies.searchService);
   registerListReposTool(server, dependencies.config);
   registerGetRepoStatusTool(server, dependencies);
-  registerTriggerReindexTool(server, dependencies.qdrantAdapters, dependencies.coordinator);
+  registerTriggerReindexTool(
+    server,
+    dependencies.config,
+    dependencies.qdrantAdapters,
+    dependencies.coordinator
+  );
 
   return server;
 }

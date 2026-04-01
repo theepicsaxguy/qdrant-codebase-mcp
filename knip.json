@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "project": ["src/**/*.ts"],
-  "ignoreDependencies": ["pino-pretty", "@secretlint/secretlint-rule-preset-recommend"]
+  "ignoreDependencies": ["pino-pretty", "@secretlint/secretlint-rule-preset-recommend"],
+  "ignoreBinaries": ["python3"]
 }

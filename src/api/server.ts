@@ -1,6 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { AppConfig } from '../config/schema';
-import type { EmbeddingAdapter } from '../embedding/adapter';
+import type { EmbeddingAdapter } from '../embedding/types';
 import {
   registerOperationalRoutes,
   registerRepoRoutes,
