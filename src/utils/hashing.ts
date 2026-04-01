@@ -79,5 +79,5 @@ export function safeResolveWithinRoot(rootPath: string, filePath: string): strin
  * Normalise a path to use forward slashes (cross-platform consistency).
  */
 export function normalizePath(p: string): string {
-  return p.split(path.sep).join('/');
+  return p.replace(/\\/g, '/');
 }
