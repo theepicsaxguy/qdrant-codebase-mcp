@@ -18,6 +18,7 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": false,
+    "types": ["node"],
     "types": ["node"]
   },
   "include": ["src/**/*"],

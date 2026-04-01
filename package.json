@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@qdrant/js-client-rest": "^1.13.0",
-    "chokidar": "^4.0.3",
+    "chokidar": "^5.0.0",
     "fast-glob": "^3.3.3",
     "fastify": "^5.2.1",
     "fastembed": "^1.14.1",
