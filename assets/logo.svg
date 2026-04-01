@@ -1,0 +1,44 @@
+<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    qdrant-codebase-mcp logo
+    Geometric faceted diamond — inspired by Qdrant's angular style.
+    Three faces of a 3-D rhombus suggest depth and structure.
+    Red/crimson palette on transparent background (works light + dark).
+    Vector nodes at the joints reference the underlying embeddings.
+  -->
+
+  <!-- ── Facet 1 · top face · lightest (catching the light) ── -->
+  <polygon points="100,18  162,70  100,92  38,70"
+           fill="#F87171"/>
+
+  <!-- ── Facet 2 · bottom-left face · mid tone ── -->
+  <polygon points="38,70   100,92  100,178  38,108"
+           fill="#DC2626"/>
+
+  <!-- ── Facet 3 · bottom-right face · darkest (in shadow) ── -->
+  <polygon points="100,92  162,70  162,108  100,178"
+           fill="#991B1B"/>
+
+  <!-- ── Edge lines — reinforce the facet seams ── -->
+  <g stroke="#7F1D1D" stroke-width="0.75" opacity="0.6">
+    <line x1="100" y1="18"  x2="38"  y2="70"/>
+    <line x1="100" y1="18"  x2="162" y2="70"/>
+    <line x1="38"  y1="70"  x2="100" y2="92"/>
+    <line x1="162" y1="70"  x2="100" y2="92"/>
+    <line x1="100" y1="92"  x2="100" y2="178"/>
+    <line x1="38"  y1="70"  x2="38"  y2="108"/>
+    <line x1="162" y1="70"  x2="162" y2="108"/>
+  </g>
+
+  <!-- ── Vector nodes at key vertices ── -->
+  <!-- top apex -->
+  <circle cx="100" cy="18"  r="4.5" fill="#FECACA" opacity="0.9"/>
+  <!-- left mid -->
+  <circle cx="38"  cy="70"  r="4"   fill="#FCA5A5" opacity="0.85"/>
+  <!-- right mid -->
+  <circle cx="162" cy="70"  r="4"   fill="#FCA5A5" opacity="0.85"/>
+  <!-- center waist — the "best match" node -->
+  <circle cx="100" cy="92"  r="5.5" fill="#FFFFFF"  opacity="0.95"/>
+  <!-- bottom apex -->
+  <circle cx="100" cy="178" r="4"   fill="#FCA5A5" opacity="0.8"/>
+</svg>

@@ -33,19 +33,24 @@ warn()    { echo -e "${YELLOW}[publish]${NC} $*"; }
 error()   { echo -e "${RED}[publish]${NC} $*" >&2; }
 section() { echo -e "\n${BLUE}── $* ──${NC}"; }
 
-# ── Token guards ────────────────────────────────────────────────────────────
-[ -z "${NPM_TOKEN:-}"          ] && { error "NPM_TOKEN is not set.";          exit 1; }
-[ -z "${MCP_REGISTRY_TOKEN:-}" ] && { error "MCP_REGISTRY_TOKEN is not set."; exit 1; }
+# ── Token guards (skipped in dry-run — no actual publish happens) ───────────
+if [ "$DRY_RUN" = "0" ]; then
+  [ -z "${NPM_TOKEN:-}"          ] && { error "NPM_TOKEN is not set.";          exit 1; }
+  [ -z "${MCP_REGISTRY_TOKEN:-}" ] && { error "MCP_REGISTRY_TOKEN is not set."; exit 1; }
+fi
 
 VSCE_EXTENSION_DIR="vsce-extension"
 VSCE_ENABLED=0
 if [ -f "${VSCE_EXTENSION_DIR}/package.json" ]; then
   VSCE_ENABLED=1
-  [ -z "${VSCE_TOKEN:-}" ] && { error "VSCE_TOKEN is not set but ${VSCE_EXTENSION_DIR}/ exists."; exit 1; }
+  [ "$DRY_RUN" = "0" ] && [ -z "${VSCE_TOKEN:-}" ] && {
+    error "VSCE_TOKEN is not set but ${VSCE_EXTENSION_DIR}/ exists."
+    exit 1
+  }
 fi
 
-# ── Local-only guards (skip in CI — Actions already enforces these) ─────────
-if [ "$CI_MODE" = "0" ]; then
+# ── Local-only guards (skip in CI and dry-run — Actions already enforces these)
+if [ "$CI_MODE" = "0" ] && [ "$DRY_RUN" = "0" ]; then
   BRANCH=$(git rev-parse --abbrev-ref HEAD)
   if [ "$BRANCH" != "main" ]; then
     error "Must publish from main (currently on '${BRANCH}'). Aborting."

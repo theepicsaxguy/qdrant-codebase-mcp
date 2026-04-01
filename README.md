@@ -1,110 +1,100 @@
-# qdrant-codebase-query
+<p align="center">
+  <img src="assets/logo.svg" width="128" alt="qdrant-codebase-mcp" />
+</p>
 
-> Semantic code search for AI assistants — indexes your codebase into [Qdrant](https://qdrant.tech) and exposes it as an [MCP](https://modelcontextprotocol.io) tool that works with VS Code Copilot, Claude Desktop, Claude Code, Cursor, and more.
+<h2 align="center">qdrant-codebase-mcp</h2>
 
-[![npm](https://img.shields.io/npm/v/qdrant-codebase-query)](https://www.npmjs.com/package/qdrant-codebase-query)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node ≥ 20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+<p align="center">
+  <strong>Stop your agent re-exploring your repo on every task.</strong><br>
+  Index once into Qdrant. Search semantically, forever. Save tokens every time.
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/qdrant-codebase-mcp">
+    <img src="https://img.shields.io/npm/v/qdrant-codebase-mcp?color=ea580c&label=npm" alt="npm version"/>
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"/>
+  </a>
+  <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="Node ≥ 20"/>
+  <a href="https://github.com/theepicsaxguy/qdrant-codebase-mcp/actions/workflows/ci.yml">
+    <img src="https://github.com/theepicsaxguy/qdrant-codebase-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"/>
+  </a>
+  <a href="https://modelcontextprotocol.io">
+    <img src="https://img.shields.io/badge/MCP-compatible-blueviolet" alt="MCP compatible"/>
+  </a>
+</p>
 
 ---
 
 ## What it does
 
-- **Semantic code search** — find code by meaning, not just text grep. Ask "where is email validation done?" and get the right file and line ranges.
-- **Continuously indexes** — watches your repo for file changes and keeps the index fresh without a full re-scan.
-- **Zero-config quickstart** — defaults to the current directory, auto-generates a Qdrant collection name, no config file required.
-- **MCP server** — exposes 4 tools (`search_code`, `list_repos`, `get_repo_status`, `trigger_reindex`) usable from any MCP client.
-- **Production ready** — deterministic chunk IDs, stale vector cleanup, health + Prometheus metrics endpoints, graceful shutdown.
+`qdrant-codebase-mcp` runs as a background service that:
+
+1. **Indexes your codebase** into a [Qdrant](https://qdrant.tech) vector database using [FastEmbed](https://github.com/Anush008/fastembed-js) — locally, no external API calls needed
+2. **Watches for changes** and re-indexes only modified files automatically
+3. **Exposes MCP tools** so any AI assistant (Roo Code, VS Code Copilot, Claude, Cursor, Windsurf) can search your code by semantic meaning
+
+When an agent calls `search_code("where is JWT validation done?")` it gets back the right file, the right lines, and a similarity score — not a grep list.
 
 ---
 
-## Quickstart (no install)
+## How indexing works
 
-You need a running Qdrant instance. The fastest way is Docker:
+```
+File saved
+    │
+    ▼
+chokidar detects write event
+    │
+    ▼  awaitWriteFinish — waits until the file handle closes
+    │
+    ▼  per-file debounce (default 2 s)
+       resets if the file is saved again before the timer fires
+    │
+    ▼
+IndexingCoordinator.indexFile()
+  ├─ delete stale vectors for this file from Qdrant
+  ├─ chunk the file  (overlapping windows, 150 lines / 20 overlap)
+  ├─ embed all chunks in one batch  (BGE-Small-EN → 384-dim vectors)
+  └─ upsert vectors + metadata into Qdrant
+```
+
+Only the **changed file** is re-indexed on save — not the whole codebase.
+A full initial index runs once on startup.
+
+**What the vectors contain:**
+Each vector point in Qdrant carries the code chunk, file path, language, line numbers, content hash, and timestamp as payload — giving the agent full context alongside the embedding.
+
+---
+
+## Quickstart
+
+You need a running Qdrant instance. The fastest way:
 
 ```bash
 docker run -p 6333:6333 qdrant/qdrant
 ```
 
-Then, from your project directory:
+Then from your project directory:
 
 ```bash
-QDRANT_URL=http://localhost:6333 npx qdrant-codebase-query
+QDRANT_URL=http://localhost:6333 npx qdrant-codebase-mcp
 ```
 
-That's it. The server will:
-1. Connect to Qdrant
-2. Create a collection named `<your-folder>-<hash>` automatically
-3. Index all code in the current directory
-4. Start watching for changes
-5. Serve MCP tools over stdio
+The server will connect to Qdrant, create a collection, index your code, start watching for changes, and serve MCP over stdio — all in one command.
+
+**One-click install into VS Code:**
+
+[Install in VS Code](vscode:mcp/install?%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22qdrant-codebase-mcp%22%5D%7D)
 
 ---
 
-## Installation
+## MCP client setup
 
-```bash
-# Run directly (npx — no install needed)
-npx qdrant-codebase-query
+### VS Code (GitHub Copilot / Roo Code)
 
-# Or install globally
-npm install -g qdrant-codebase-query
-qdrant-codebase-query
-```
-
----
-
-## Configuration
-
-All configuration is via **environment variables**. No config file is required.
-
-| Variable | Default | Description |
-|---|---|---|
-| `QDRANT_URL` | `http://localhost:6333` | Qdrant server URL |
-| `QDRANT_API_KEY` | *(none)* | Qdrant API key (required for Qdrant Cloud) |
-| `ROOT_PATH` | `process.cwd()` | Path to the repository to index |
-| `COLLECTION_NAME` | `<folder>-<hash>` | Qdrant collection name (auto-generated if not set) |
-| `REPO_ID` | `<folder name>` | Logical name for the repo (shown in MCP tools) |
-| `EMBEDDING_MODEL` | `fast-bge-small-en-v1.5` | FastEmbed model name |
-| `EMBEDDING_BATCH_SIZE` | `64` | Embedding batch size |
-| `CHUNK_MAX_LINES` | `150` | Maximum lines per code chunk |
-| `CHUNK_OVERLAP_LINES` | `20` | Overlap between adjacent chunks |
-| `MAX_FILE_SIZE_BYTES` | `1000000` | Files larger than this are skipped |
-| `WATCHER_DEBOUNCE_MS` | `300` | File watcher debounce delay |
-| `PORT` | `3000` | HTTP API port (health, metrics) |
-| `HOST` | `0.0.0.0` | HTTP API host |
-| `CONFIG_PATH` | *(none)* | Optional path to a `config.yml` file |
-
-> **Qdrant Cloud:** Set `QDRANT_URL` to your cluster URL and `QDRANT_API_KEY` to your API key.
-
-### Optional: config.yml
-
-If you prefer a file-based config (e.g. for multi-repo setups), create a `config.yml`. Environment variables always take precedence over the file.
-
-```yaml
-qdrantUrl: https://your-cluster.qdrant.tech
-qdrantApiKey: your-api-key
-
-repos:
-  - repoId: my-backend
-    rootPath: ./src/backend
-    collectionName: my-backend-code
-  - repoId: my-frontend
-    rootPath: ./src/frontend
-    collectionName: my-frontend-code
-
-embeddingModel: fast-bge-small-en-v1.5
-chunkMaxLines: 150
-chunkOverlapLines: 20
-```
-
----
-
-## MCP Client Setup
-
-### VS Code (GitHub Copilot)
-
-Add to `.vscode/mcp.json` in your project:
+Add to `.vscode/mcp.json` in your workspace:
 
 ```json
 {
@@ -118,15 +108,15 @@ Add to `.vscode/mcp.json` in your project:
     {
       "type": "promptString",
       "id": "qdrantApiKey",
-      "description": "Qdrant API key (leave empty for local Qdrant)",
+      "description": "Qdrant API key (leave empty for local instances)",
       "password": true
     }
   ],
   "servers": {
-    "qdrant-codebase-query": {
+    "qdrant-codebase-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "qdrant-codebase-query"],
+      "args": ["-y", "qdrant-codebase-mcp"],
       "env": {
         "QDRANT_URL": "${input:qdrantUrl}",
         "QDRANT_API_KEY": "${input:qdrantApiKey}",
@@ -137,21 +127,19 @@ Add to `.vscode/mcp.json` in your project:
 }
 ```
 
-VS Code will prompt you for the Qdrant URL and API key the first time.
-
 ### Claude Desktop
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+`~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+`%APPDATA%\Claude\claude_desktop_config.json` (Windows)
 
 ```json
 {
   "mcpServers": {
-    "qdrant-codebase-query": {
+    "qdrant-codebase-mcp": {
       "command": "npx",
-      "args": ["-y", "qdrant-codebase-query"],
+      "args": ["-y", "qdrant-codebase-mcp"],
       "env": {
         "QDRANT_URL": "http://localhost:6333",
-        "QDRANT_API_KEY": "",
         "ROOT_PATH": "/path/to/your/project"
       }
     }
@@ -159,25 +147,24 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 }
 ```
 
-### Claude Code (CLI)
+### Claude Code
 
 ```bash
-claude mcp add qdrant-codebase-query \
+claude mcp add qdrant-codebase-mcp \
   -e QDRANT_URL=http://localhost:6333 \
-  -e ROOT_PATH=/path/to/your/project \
-  -- npx -y qdrant-codebase-query
+  -- npx -y qdrant-codebase-mcp
 ```
 
 ### Cursor
 
-Open **Cursor → Settings → MCP → Add new MCP server** and enter:
+**Settings → MCP → Add new MCP server:**
 
 ```json
 {
-  "name": "qdrant-codebase-query",
+  "name": "qdrant-codebase-mcp",
   "type": "stdio",
   "command": "npx",
-  "args": ["-y", "qdrant-codebase-query"],
+  "args": ["-y", "qdrant-codebase-mcp"],
   "env": {
     "QDRANT_URL": "http://localhost:6333",
     "ROOT_PATH": "/path/to/your/project"
@@ -187,14 +174,14 @@ Open **Cursor → Settings → MCP → Add new MCP server** and enter:
 
 ### Windsurf
 
-Add to `~/.codeium/windsurf/mcp_config.json`:
+`~/.codeium/windsurf/mcp_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "qdrant-codebase-query": {
+    "qdrant-codebase-mcp": {
       "command": "npx",
-      "args": ["-y", "qdrant-codebase-query"],
+      "args": ["-y", "qdrant-codebase-mcp"],
       "env": {
         "QDRANT_URL": "http://localhost:6333",
         "ROOT_PATH": "/path/to/your/project"
@@ -206,115 +193,155 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ---
 
-## MCP Tools
+## MCP tools
 
-| Tool | Description |
-|---|---|
-| `search_code` | Semantic search across indexed repos. Returns file paths, line ranges, code snippets, and similarity scores. |
-| `list_repos` | List all indexed repositories. |
-| `get_repo_status` | Show indexing status for a repo (complete, in-progress, last error). |
-| `trigger_reindex` | Trigger a full re-index of a repository (runs in background). |
+| Tool | Input | What it returns |
+|---|---|---|
+| `search_code` | `query`, optional: `repoId`, `language`, `directoryPrefix`, `limit`, `minScore` | Ranked code chunks with file path, line range, language, similarity score |
+| `list_repos` | — | All configured repos with collection name and root path |
+| `get_repo_status` | `repoId` | Indexing state, timestamps, last error, embedding model info |
+| `trigger_reindex` | `repoId` | Kicks off a full re-index in the background, returns immediately |
 
-### Example: search_code
-
-```
-Query: "where are JWT tokens validated?"
-```
-
-Returns:
+**Example — finding code by concept:**
 
 ```
-### 1. `src/auth/middleware.ts` lines 45–72 · repo: my-backend · score: 0.921
+search_code("JWT token validation")
+```
+
+```
+### 1. src/auth/middleware.ts  lines 45–72  ·  repo: my-backend  ·  score: 0.921
+\`\`\`typescript
+export async function validateJwt(token: string): Promise<JwtPayload> {
+  ...
+}
+\`\`\`
+
+### 2. src/api/guards/auth.guard.ts  lines 12–34  ·  score: 0.887
 ...
 ```
 
 ---
 
+## Configuration
+
+All settings are via **environment variables** or an optional `config.yml`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `QDRANT_URL` | `http://localhost:6333` | Qdrant server URL |
+| `QDRANT_API_KEY` | — | Qdrant API key (required for Qdrant Cloud) |
+| `ROOT_PATH` | `process.cwd()` | Repository root to index |
+| `COLLECTION_NAME` | `<folder>-<hash>` | Qdrant collection (auto-generated) |
+| `REPO_ID` | folder name | Logical name shown in MCP tools |
+| `EMBEDDING_MODEL` | `fast-bge-small-en-v1.5` | FastEmbed model |
+| `EMBEDDING_BATCH_SIZE` | `64` | Chunks per embedding batch |
+| `CHUNK_MAX_LINES` | `150` | Max lines per code chunk |
+| `CHUNK_OVERLAP_LINES` | `20` | Overlap between adjacent chunks |
+| `MAX_FILE_SIZE_BYTES` | `1000000` | Files larger than this are skipped |
+| `WATCHER_DEBOUNCE_MS` | `2000` | Quiet period after a save before re-indexing |
+| `PORT` | `3000` | HTTP health/metrics port |
+| `CONFIG_PATH` | — | Path to a `config.yml` for multi-repo setups |
+
+### Multi-repo config.yml
+
+```yaml
+qdrantUrl: https://your-cluster.qdrant.tech
+qdrantApiKey: your-api-key
+embeddingModel: fast-bge-small-en-v1.5
+chunkMaxLines: 150
+chunkOverlapLines: 20
+watcherDebounceMs: 2000
+
+repos:
+  - repoId: backend
+    rootPath: ./src/backend
+    collectionName: backend-code
+  - repoId: frontend
+    rootPath: ./src/frontend
+    collectionName: frontend-code
+```
+
+### Supported embedding models
+
+| Model | Dimensions | Notes |
+|---|---|---|
+| `fast-bge-small-en-v1.5` | 384 | Default — fast, low memory |
+| `fast-bge-base-en-v1.5` | 768 | Better recall, more memory |
+| `multilingual-e5-large` | 1024 | Multi-language codebases |
+
+---
+
 ## HTTP API
 
-The HTTP server (default port 3000) exposes:
+The service also exposes a REST API (default port 3000):
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/health` | GET | Returns `{"status":"ok"}` when ready |
-| `/metrics` | GET | Prometheus metrics |
-| `/repos` | GET | List indexed repos |
-| `/repos/:id/status` | GET | Get repo indexing status |
-| `/repos/:id/search` | POST | REST search endpoint |
-| `/repos/:id/reindex` | POST | Trigger re-index |
-
-To run the HTTP service separately (useful for team setups):
-
-```bash
-ROOT_PATH=/path/to/project QDRANT_URL=http://localhost:6333 npm start
-```
+| Endpoint | Description |
+|---|---|
+| `GET /health` | `{"status":"ok"}` when ready |
+| `GET /metrics` | Prometheus metrics |
+| `GET /repos` | List all indexed repos |
+| `GET /repos/:id/status` | Indexing status for a repo |
+| `POST /repos/:id/search` | REST search (same as MCP `search_code`) |
+| `POST /repos/:id/reindex` | Trigger a full re-index |
 
 ---
 
 ## Architecture
 
 ```
-npx qdrant-codebase-query
+npx qdrant-codebase-mcp
          │
-         ▼
-   mcp-entry.ts  ──── stdio MCP transport ──▶ AI client
+         ├── stdio ──────────────────────────────▶ MCP client (AI assistant)
+         │          search_code / list_repos /
+         │          get_repo_status / trigger_reindex
          │
-         ▼
-   bootstrap.ts
-   ┌──────────────────────────────────────────────┐
-   │  EmbeddingAdapter (fastembed BGE-small 384d) │
-   │  QdrantAdapter (collection lifecycle)         │
-   │  IndexingCoordinator (scan → chunk → upsert) │
-   │  FileWatcherManager (chokidar, debounced)     │
-   │  SearchService (ANN search + filters)         │
-   └──────────────────────────────────────────────┘
+         └── mcp-entry.ts
+                   │
+                   ▼
+             bootstrap.ts  (initialises all services)
+             ┌────────────────────────────────────────────┐
+             │                                            │
+             │  EmbeddingAdapter                          │
+             │  └─ FastEmbed BGE-Small-EN (384-dim)       │
+             │     runs locally, no API calls             │
+             │                                            │
+             │  QdrantAdapter (per repo)                  │
+             │  └─ collection lifecycle + upsert/search   │
+             │                                            │
+             │  IndexingCoordinator                       │
+             │  └─ scan → chunk → embed → upsert          │
+             │     incremental: only changed files        │
+             │                                            │
+             │  FileWatcherManager                        │
+             │  └─ chokidar + per-file debounce           │
+             │                                            │
+             │  SearchService                             │
+             │  └─ embed query → ANN search → rank        │
+             │     single-repo and cross-repo             │
+             └────────────────────────────────────────────┘
 ```
-
-- **Chunking** — files are split into overlapping chunks (default 150 lines, 20 overlap) with deterministic content-hashed IDs
-- **Incremental updates** — only changed/new files are re-embedded; deleted files are removed from the index
-- **Vector dimensions** — BGE-Small-EN: 384, BGE-Base-EN: 768, Multilingual-E5-Large: 1024
 
 ---
 
 ## Development
 
 ```bash
-git clone https://github.com/yourusername/qdrant-codebase-query
-cd qdrant-codebase-query
+git clone https://github.com/theepicsaxguy/qdrant-codebase-mcp
+cd qdrant-codebase-mcp
 npm install
+cp config.example.yml config.yml   # fill in your Qdrant URL
 
-# Run tests
-npm test
-
-# Build
-npm run build
-
-# Run MCP server from source (env-var config)
-QDRANT_URL=http://localhost:6333 npm run mcp:dev
-
-# Run HTTP service from source
-QDRANT_URL=http://localhost:6333 npm run dev
+npm run dev          # tsx watch — rebuilds on file save
+npm run typecheck    # tsc --noEmit
+npm run lint         # ESLint (zero warnings)
+npm test             # unit tests
+npm run build        # compile to dist/
 ```
 
-### Running with a config file
-
-```bash
-cp config.example.yml config.yml
-# Edit config.yml, then:
-npm run dev
-```
-
----
-
-## Publishing
-
-```bash
-npm run build
-npm publish
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor guide including commit conventions, changeset requirements, and the release process.
 
 ---
 
 ## License
 
-MIT
+[MIT](LICENSE)

@@ -2,9 +2,9 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.theepicsaxguy/qdrant-codebase-mcp",
   "title": "Qdrant Codebase Indexing",
-  "description": "MCP server that continuously indexes your codebase into Qdrant and exposes semantic vector search — enabling AI assistants to find relevant code by meaning, not keyword.",
+  "description": "Stop your agent re-exploring your repo. Index once into Qdrant, search semantically forever.",
   "version": "0.1.0",
-  "repository": {
+  "source": {
     "url": "https://github.com/theepicsaxguy/qdrant-codebase-mcp"
   },
   "packages": [
@@ -18,13 +18,13 @@
       "env": [
         {
           "name": "QDRANT_URL",
-          "description": "URL of your Qdrant instance (e.g. http://localhost:6333 or your Qdrant Cloud URL)",
+          "description": "Qdrant instance URL (http://localhost:6333 or Qdrant Cloud)",
           "default": "http://localhost:6333",
           "required": true
         },
         {
           "name": "QDRANT_API_KEY",
-          "description": "Qdrant API key — leave empty for local unauthenticated instances",
+          "description": "Qdrant API key — leave empty for local instances",
           "secret": true,
           "required": false
         },
