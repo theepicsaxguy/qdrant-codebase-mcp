@@ -166,3 +166,7 @@ export function validatePointVectors(points: QdrantPoint[], vectorSize: number):
     }
   }
 }
+
+export function normalizeVector(vector: ArrayLike<number>): number[] {
+  return Array.from(vector);
+}

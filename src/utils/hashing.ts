@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import * as path from 'path';
 
 /**
- * Generate a deterministic UUID v4-shaped ID for a chunk.
+ * Generate a deterministic RFC 4122 UUID string for a chunk.
  * Uses the first 128 bits of SHA-256(repoId:filePath:startLine:endLine) formatted
  * as a UUID string — the only ID format Qdrant accepts for string point IDs.
  */
@@ -13,7 +13,15 @@ export function chunkId(
   endLine: number
 ): string {
   const input = `${repoId}:${filePath}:${startLine}:${endLine}`;
-  const h = createHash('sha256').update(input).digest('hex').slice(0, 32);
+  const bytes = createHash('sha256').update(input).digest().subarray(0, 16);
+  const byte6 = bytes[6];
+  const byte8 = bytes[8];
+  if (byte6 === undefined || byte8 === undefined) {
+    throw new Error('Failed to derive a deterministic chunk UUID');
+  }
+  bytes[6] = (byte6 & 0x0f) | 0x40;
+  bytes[8] = (byte8 & 0x3f) | 0x80;
+  const h = Buffer.from(bytes).toString('hex');
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
 

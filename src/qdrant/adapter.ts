@@ -10,6 +10,7 @@ import {
   mapSearchPoint,
   metadataId,
   metadataPoint,
+  normalizeVector,
   readVectorSize,
   SEARCH_RESULT_PAYLOAD_FIELDS,
   toIndexingStatus,
@@ -84,7 +85,7 @@ export class QdrantAdapter {
     validatePointVectors(points, this.vectorSize);
     const processed: Schemas['PointStruct'][] = points.map((p) => ({
       id: p.id,
-      vector: p.vector,
+      vector: normalizeVector(p.vector),
       payload: { ...p.payload, pathSegments: buildPathSegments(p.payload.filePath) },
     }));
     await this.client.upsert(this.collectionName, { points: processed, wait: true });

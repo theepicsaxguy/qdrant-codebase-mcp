@@ -60,4 +60,21 @@ describe('QdrantAdapter.upsertChunks — vector validation', () => {
     const bad = { id: 'aaaaaaaa-0000-0000-0000-000000000005', vector: [], payload: {} };
     await expect(adapter.upsertChunks([good, bad])).rejects.toThrow('vector is empty');
   });
+
+  it('normalizes typed-array vectors before upsert', async () => {
+    const point = {
+      id: 'aaaaaaaa-0000-0000-0000-000000000006',
+      vector: new Float32Array(new Array<number>(VECTOR_SIZE).fill(0.1)) as unknown as number[],
+      payload: { filePath: 'src/index.ts', type: 'code' },
+    };
+
+    await expect(adapter.upsertChunks([point])).resolves.not.toThrow();
+
+    const client = (adapter as unknown as { client: { upsert: ReturnType<typeof vi.fn> } }).client;
+    expect(client.upsert).toHaveBeenCalledOnce();
+    const [{ points }] = client.upsert.mock.calls[0]?.slice(1) as [
+      { points: Array<{ vector: unknown }> },
+    ];
+    expect(Array.isArray(points[0]?.vector)).toBe(true);
+  });
 });

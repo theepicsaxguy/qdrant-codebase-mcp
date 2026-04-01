@@ -1,4 +1,4 @@
-import { FlagEmbedding, EmbeddingModel } from 'fastembed';
+import { FlagEmbedding, type EmbeddingModel } from 'fastembed';
 import { logger } from '../logger';
 import { embeddingLatencySeconds } from '../metrics';
 
@@ -16,7 +16,7 @@ const MODEL_DIMS: Record<string, number> = {
 export class EmbeddingAdapter {
   private model!: FlagEmbedding;
   private _vectorSize!: number;
-  private _modelName: string;
+  private readonly _modelName: string;
   private readonly batchSize: number;
   private readonly log = logger.child({ component: 'EmbeddingAdapter' });
 
@@ -37,11 +37,11 @@ export class EmbeddingAdapter {
     const probe = 'dimension probe';
     const gen = this.model.embed([probe], 1);
     const first = await gen.next();
-    if (first.done || !first.value) {
+    if (first.done) {
       // Fall back to known dimensions map
       this._vectorSize = MODEL_DIMS[this._modelName] ?? 384;
     } else {
-      this._vectorSize = first.value[0]?.length ?? (MODEL_DIMS[this._modelName] ?? 384);
+      this._vectorSize = first.value[0]?.length ?? MODEL_DIMS[this._modelName] ?? 384;
     }
 
     this.log.info({ model: this._modelName, vectorSize: this._vectorSize }, 'Model ready');
@@ -60,14 +60,13 @@ export class EmbeddingAdapter {
     const results: number[][] = [];
     const gen = this.model.passageEmbed(texts, this.batchSize);
     for await (const batch of gen) {
-      const b = batch as number[][];
-      results.push(...b);
+      results.push(...batch.map((vector) => Array.from(vector)));
     }
     end();
     return results;
   }
 
   async embedQuery(query: string): Promise<number[]> {
-    return this.model.queryEmbed(query);
+    return Array.from(await this.model.queryEmbed(query));
   }
 }
