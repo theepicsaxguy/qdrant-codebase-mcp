@@ -6,7 +6,7 @@ import { SearchService } from './search/service';
 import { logger } from './logger';
 import type { AppConfig } from './config/schema';
 
-export interface ServiceBundle {
+interface ServiceBundle {
   config: AppConfig;
   embedding: EmbeddingAdapter;
   qdrantAdapters: Map<string, QdrantAdapter>;

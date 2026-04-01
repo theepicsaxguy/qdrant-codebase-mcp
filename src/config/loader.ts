@@ -47,7 +47,7 @@ function buildRepoFromEnv(cwd: string): RepoConfig {
  * rootPath defaults to the current working directory.
  * collectionName defaults to <folder>-<hash>.
  */
-export function loadConfigFromEnv(): AppConfig {
+function loadConfigFromEnv(): AppConfig {
   const cwd = process.cwd();
   const repo = buildRepoFromEnv(cwd);
   const result = AppConfigSchema.safeParse(buildEnvConfig(repo));
@@ -78,7 +78,7 @@ function buildEnvConfig(repo: RepoConfig): Record<string, unknown> {
 /**
  * Load AppConfig from a YAML/JSON file, then apply env var overrides.
  */
-export function loadConfigFromFile(configPath: string): AppConfig {
+function loadConfigFromFile(configPath: string): AppConfig {
   const resolved = path.resolve(configPath);
   const configDir = path.dirname(resolved);
 

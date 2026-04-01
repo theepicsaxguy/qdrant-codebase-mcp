@@ -1,3 +1,4 @@
 npm run typecheck
 npm test
 npx prettier --check "src/**/*.ts" "tests/**/*.ts"
+npm run knip

@@ -1,8 +1,7 @@
-import { createHash } from 'crypto';
 import { detectLanguage, chunkId, contentHash } from '../utils/hashing';
 import type { Chunk, ChunkInput } from '../types';
 
-export interface ChunkerOptions {
+interface ChunkerOptions {
   maxLines: number;
   overlapLines: number;
 }
@@ -46,8 +45,4 @@ export function chunkCode(input: ChunkInput, opts: ChunkerOptions): Chunk[] {
   }
 
   return chunks;
-}
-
-export function hashFile(content: string): string {
-  return createHash('sha256').update(content).digest('hex');
 }

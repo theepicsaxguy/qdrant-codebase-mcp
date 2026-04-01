@@ -67,12 +67,6 @@ export function isBinaryFile(filePath: string): boolean {
   }
 }
 
-export function isMinified(content: string): boolean {
-  const lines = content.split('\n');
-  const longLines = lines.filter((l) => l.length > 500).length;
-  return lines.length > 0 && longLines / lines.length > 0.3;
-}
-
 function filterSafeFiles(files: string[], root: string): string[] {
   return files.filter((f) => {
     const abs = path.resolve(f);
