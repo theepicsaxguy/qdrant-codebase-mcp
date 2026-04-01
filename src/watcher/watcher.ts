@@ -15,7 +15,7 @@ interface WatcherContext {
   repo: RepoConfig;
   adapter: QdrantAdapter;
   log: typeof logger;
-  debounce: (filePath: string, action: () => Promise<void>) => void;
+  debounce: (filePath: string, reason: string, action: () => Promise<void>) => void;
 }
 
 export class FileWatcherManager {
@@ -92,17 +92,27 @@ export class FileWatcherManager {
   private createDebounce(
     log: typeof logger,
     debounceTimers: Map<string, ReturnType<typeof setTimeout>>
-  ): (filePath: string, action: () => Promise<void>) => void {
-    return (filePath: string, action: () => Promise<void>): void => {
+  ): (filePath: string, reason: string, action: () => Promise<void>) => void {
+    return (filePath: string, reason: string, action: () => Promise<void>): void => {
       const existing = debounceTimers.get(filePath);
       if (existing) {
         clearTimeout(existing);
+        log.info(
+          { filePath, debounceMs: this.config.watcherDebounceMs },
+          'File changed again; resetting debounce timer'
+        );
       }
+
+      log.info(
+        { filePath, debounceMs: this.config.watcherDebounceMs, reason },
+        'File event detected; waiting before indexing'
+      );
 
       debounceTimers.set(
         filePath,
         setTimeout(() => {
           debounceTimers.delete(filePath);
+          log.info({ filePath, reason }, 'Debounce window complete; processing file event');
           action().catch((err) => {
             log.error({ filePath, err }, 'Debounced action failed');
           });
@@ -131,8 +141,7 @@ export class FileWatcherManager {
         return;
       }
 
-      context.log.debug({ filePath }, message);
-      context.debounce(filePath, async () => {
+      context.debounce(filePath, message, async () => {
         await this.coordinator.indexFile(filePath, context.repo, context.adapter);
       });
     });
@@ -140,8 +149,7 @@ export class FileWatcherManager {
 
   private registerDeleteEvent(watcher: FSWatcher, context: WatcherContext): void {
     watcher.on('unlink', (filePath: string) => {
-      context.log.debug({ filePath }, 'File deleted');
-      context.debounce(filePath, async () => {
+      context.debounce(filePath, 'File deleted', async () => {
         await this.coordinator.deleteFile(filePath, context.repo, context.adapter);
       });
     });
