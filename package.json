@@ -58,7 +58,8 @@
     "audit": "npm audit --audit-level=moderate",
     "changeset": "changeset",
     "version:packages": "changeset version",
-    "release": "npm run build && npm publish",
+    "publish:all": "bash scripts/publish.sh",
+    "publish:all:ci": "bash scripts/publish.sh --ci",
     "prepare": "[ -d .git ] && husky || true",
     "prepublishOnly": "npm run typecheck && npm run lint && npm run knip && npm run audit && npm test && npm run build"
   },

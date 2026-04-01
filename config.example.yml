@@ -4,7 +4,7 @@ embeddingModel: fast-bge-small-en-v1.5
 chunkMaxLines: 150
 chunkOverlapLines: 20
 embeddingBatchSize: 64
-watcherDebounceMs: 300
+watcherDebounceMs: 2000
 maxFileSizeBytes: 1000000
 port: 3000
 host: 0.0.0.0

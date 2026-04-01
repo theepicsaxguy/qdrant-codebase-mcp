@@ -17,7 +17,7 @@ export const AppConfigSchema = z.object({
   chunkMaxLines: z.number().int().positive().default(150),
   chunkOverlapLines: z.number().int().nonnegative().default(20),
   embeddingBatchSize: z.number().int().positive().default(64),
-  watcherDebounceMs: z.number().int().positive().default(300),
+  watcherDebounceMs: z.number().int().positive().default(2000),
   maxFileSizeBytes: z.number().positive().default(1_000_000),
   port: z.number().int().positive().default(3000),
   host: z.string().default('0.0.0.0'),

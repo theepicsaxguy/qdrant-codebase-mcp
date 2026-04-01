@@ -1,2 +1,18 @@
 npx lint-staged
 npm run typecheck
+
+# ── Changeset guard ─────────────────────────────────────────────────────────
+# If src/ files are staged but no changeset exists, create one now.
+# This ensures every published change is documented before it leaves the machine.
+SRC_STAGED=$(git diff --cached --name-only | grep -c '^src/' || true)
+CHANGESETS=$(find .changeset -name "*.md" ! -name "README.md" 2>/dev/null | wc -l | tr -d ' ')
+
+if [ "$SRC_STAGED" -gt 0 ] && [ "$CHANGESETS" -eq 0 ]; then
+  echo ""
+  echo "⚠  src/ files are staged but no changeset exists."
+  echo "   Describe this change so the version and CHANGELOG stay accurate."
+  echo ""
+  npx changeset
+  # Stage the generated changeset file so it's included in this commit
+  git add .changeset/
+fi
