@@ -27,7 +27,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/qdrant-codebase-query.git"
+    "url": "https://github.com/theepicsaxguy/qdrant-codebase-query.git"
   },
   "license": "MIT",
   "scripts": {
@@ -41,7 +41,16 @@
     "test:all": "vitest run",
     "test:watch": "vitest tests/unit",
     "mcp": "node dist/mcp-entry.js",
-    "mcp:dev": "tsx src/mcp-entry.ts"
+    "mcp:dev": "tsx src/mcp-entry.ts",
+    "typecheck": "tsc --noEmit",
+    "knip": "knip",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --max-warnings 0",
+      "prettier --check"
+    ]
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -69,6 +78,9 @@
     "eslint-plugin-sonarjs": "^4.0.2",
     "eslint-plugin-unicorn": "^64.0.0",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "husky": "^9.1.7",
+    "knip": "^6.1.1",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
