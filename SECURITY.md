@@ -14,6 +14,7 @@ Report vulnerabilities privately via GitHub's Security Advisory feature:
 **[Report a vulnerability](https://github.com/theepicsaxguy/qdrant-codebase-query/security/advisories/new)**
 
 Please include:
+
 - A description of the vulnerability and its potential impact
 - Steps to reproduce
 - Any suggested fix or mitigation

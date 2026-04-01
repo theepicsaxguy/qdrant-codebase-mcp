@@ -31,7 +31,10 @@ export default [
       // ── TypeScript: strict type-checked ──────────────────────────────────
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/no-unused-expressions': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
@@ -46,11 +49,17 @@ export default [
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
       '@typescript-eslint/prefer-optional-chain': 'error',
-      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', fixStyle: 'inline-type-imports' }],
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+      ],
       '@typescript-eslint/no-import-type-side-effects': 'error',
       '@typescript-eslint/no-inferrable-types': 'error',
       '@typescript-eslint/prefer-as-const': 'error',
-      '@typescript-eslint/explicit-function-return-type': ['error', { allowExpressions: true, allowTypedFunctionExpressions: true }],
+      '@typescript-eslint/explicit-function-return-type': [
+        'error',
+        { allowExpressions: true, allowTypedFunctionExpressions: true },
+      ],
       '@typescript-eslint/explicit-module-boundary-types': 'error',
       '@typescript-eslint/no-confusing-void-expression': 'error',
       '@typescript-eslint/require-await': 'error',
@@ -68,14 +77,14 @@ export default [
       // If a file exceeds this, extract a new module — that IS the SOLID fix.
       'max-lines': ['error', { max: 200, skipBlankLines: true, skipComments: true }],
       'max-lines-per-function': ['error', { max: 40, skipBlankLines: true, skipComments: true }],
-      'complexity': ['error', 10],
+      complexity: ['error', 10],
       'max-depth': ['error', 3],
       'max-params': ['error', 4],
 
       // ── No anti-patterns ──────────────────────────────────────────────────
       'no-var': 'error',
       'prefer-const': 'error',
-      'eqeqeq': ['error', 'always'],
+      eqeqeq: ['error', 'always'],
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'prefer-template': 'error',
@@ -97,38 +106,38 @@ export default [
       'sonarjs/prefer-immediate-return': 'error',
 
       // ── Unicorn: best practices ────────────────────────────────────────────
-      'unicorn/no-for-loop': 'error',              // use for...of
-      'unicorn/prefer-array-find': 'error',         // .find() not .filter()[0]
-      'unicorn/prefer-includes': 'error',           // .includes() not .indexOf()
+      'unicorn/no-for-loop': 'error', // use for...of
+      'unicorn/prefer-array-find': 'error', // .find() not .filter()[0]
+      'unicorn/prefer-includes': 'error', // .includes() not .indexOf()
       'unicorn/prefer-string-starts-ends-with': 'error',
       'unicorn/throw-new-error': 'error',
       'unicorn/no-useless-undefined': 'error',
-      'unicorn/no-static-only-class': 'error',      // SOLID: use module exports
+      'unicorn/no-static-only-class': 'error', // SOLID: use module exports
       'unicorn/no-this-assignment': 'error',
       'unicorn/consistent-function-scoping': 'error',
       'unicorn/no-array-push-push': 'error',
       'unicorn/prefer-array-flat-map': 'error',
-      'unicorn/no-array-for-each': 'error',         // use for...of
+      'unicorn/no-array-for-each': 'error', // use for...of
       'unicorn/no-nested-ternary': 'error',
       'unicorn/prefer-string-slice': 'error',
-      'unicorn/error-message': 'error',             // errors must have messages
+      'unicorn/error-message': 'error', // errors must have messages
       'unicorn/prefer-type-error': 'error',
-      'unicorn/no-process-exit': 'error',           // use process.exitCode instead
+      'unicorn/no-process-exit': 'error', // use process.exitCode instead
       'unicorn/prefer-logical-operator-over-ternary': 'error',
 
       // ── Security ──────────────────────────────────────────────────────────
       ...security.configs.recommended.rules,
-      'security/detect-object-injection': 'error',   // bracket access with user input
+      'security/detect-object-injection': 'error', // bracket access with user input
       'security/detect-non-literal-fs-filename': 'error', // path traversal
       'security/detect-non-literal-regexp': 'error', // ReDoS
-      'security/detect-unsafe-regex': 'error',       // catastrophic backtracking
+      'security/detect-unsafe-regex': 'error', // catastrophic backtracking
       'security/detect-buffer-noassert': 'error',
-      'security/detect-child-process': 'error',      // shell injection
+      'security/detect-child-process': 'error', // shell injection
       'security/detect-disable-mustache-escape': 'error',
       'security/detect-eval-with-expression': 'error',
       'security/detect-new-buffer': 'error',
       'security/detect-possible-timing-attacks': 'error',
-      'security/detect-pseudoRandomBytes': 'error',  // use crypto.randomBytes
+      'security/detect-pseudoRandomBytes': 'error', // use crypto.randomBytes
     },
   },
   // Tests: basic TS parsing (no type-aware project) — tests rules don't need type info
@@ -147,8 +156,14 @@ export default [
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
-      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', fixStyle: 'inline-type-imports' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+      ],
       'unused-imports/no-unused-imports': 'error',
       'no-unreachable': 'error',
       'no-var': 'error',

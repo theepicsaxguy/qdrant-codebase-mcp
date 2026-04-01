@@ -19,6 +19,7 @@ export const AppConfigSchema = z.object({
   embeddingBatchSize: z.number().int().positive().default(64),
   watcherDebounceMs: z.number().int().positive().default(2000),
   maxFileSizeBytes: z.number().positive().default(1_000_000),
+  minScore: z.number().min(0).max(1).default(0.8),
   port: z.number().int().positive().default(3000),
   host: z.string().default('0.0.0.0'),
   repos: z.array(RepoConfigSchema).min(1),

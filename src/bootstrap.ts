@@ -52,7 +52,7 @@ export async function bootstrap(config: AppConfig): Promise<ServiceBundle> {
 
   // 3. Build services
   const coordinator = new IndexingCoordinator(config, qdrantAdapters, embedding);
-  const searchService = new SearchService(qdrantAdapters, embedding);
+  const searchService = new SearchService(qdrantAdapters, embedding, config.minScore);
   const watcherManager = new FileWatcherManager(config, qdrantAdapters, coordinator);
 
   return { config, embedding, qdrantAdapters, coordinator, searchService, watcherManager };

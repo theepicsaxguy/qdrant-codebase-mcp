@@ -195,12 +195,12 @@ claude mcp add qdrant-codebase-mcp \
 
 ## MCP tools
 
-| Tool | Input | What it returns |
-|---|---|---|
-| `search_code` | `query`, optional: `repoId`, `language`, `directoryPrefix`, `limit`, `minScore` | Ranked code chunks with file path, line range, language, similarity score |
-| `list_repos` | — | All configured repos with collection name and root path |
-| `get_repo_status` | `repoId` | Indexing state, timestamps, last error, embedding model info |
-| `trigger_reindex` | `repoId` | Kicks off a full re-index in the background, returns immediately |
+| Tool              | Input                                                                           | What it returns                                                           |
+| ----------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `search_code`     | `query`, optional: `repoId`, `language`, `directoryPrefix`, `limit`, `minScore` | Ranked code chunks with file path, line range, language, similarity score |
+| `list_repos`      | —                                                                               | All configured repos with collection name and root path                   |
+| `get_repo_status` | `repoId`                                                                        | Indexing state, timestamps, last error, embedding model info              |
+| `trigger_reindex` | `repoId`                                                                        | Kicks off a full re-index in the background, returns immediately          |
 
 **Example — finding code by concept:**
 
@@ -226,21 +226,22 @@ export async function validateJwt(token: string): Promise<JwtPayload> {
 
 All settings are via **environment variables** or an optional `config.yml`.
 
-| Variable | Default | Description |
-|---|---|---|
-| `QDRANT_URL` | `http://localhost:6333` | Qdrant server URL |
-| `QDRANT_API_KEY` | — | Qdrant API key (required for Qdrant Cloud) |
-| `ROOT_PATH` | `process.cwd()` | Repository root to index |
-| `COLLECTION_NAME` | `<folder>-<hash>` | Qdrant collection (auto-generated) |
-| `REPO_ID` | folder name | Logical name shown in MCP tools |
-| `EMBEDDING_MODEL` | `fast-bge-small-en-v1.5` | FastEmbed model |
-| `EMBEDDING_BATCH_SIZE` | `64` | Chunks per embedding batch |
-| `CHUNK_MAX_LINES` | `150` | Max lines per code chunk |
-| `CHUNK_OVERLAP_LINES` | `20` | Overlap between adjacent chunks |
-| `MAX_FILE_SIZE_BYTES` | `1000000` | Files larger than this are skipped |
-| `WATCHER_DEBOUNCE_MS` | `2000` | Quiet period after a save before re-indexing |
-| `PORT` | `3000` | HTTP health/metrics port |
-| `CONFIG_PATH` | — | Path to a `config.yml` for multi-repo setups |
+| Variable               | Default                  | Description                                       |
+| ---------------------- | ------------------------ | ------------------------------------------------- |
+| `QDRANT_URL`           | `http://localhost:6333`  | Qdrant server URL                                 |
+| `QDRANT_API_KEY`       | —                        | Qdrant API key (required for Qdrant Cloud)        |
+| `ROOT_PATH`            | `process.cwd()`          | Repository root to index                          |
+| `COLLECTION_NAME`      | `<folder>-<hash>`        | Qdrant collection (auto-generated)                |
+| `REPO_ID`              | folder name              | Logical name shown in MCP tools                   |
+| `EMBEDDING_MODEL`      | `fast-bge-small-en-v1.5` | FastEmbed model                                   |
+| `EMBEDDING_BATCH_SIZE` | `64`                     | Chunks per embedding batch                        |
+| `CHUNK_MAX_LINES`      | `150`                    | Max lines per code chunk                          |
+| `CHUNK_OVERLAP_LINES`  | `20`                     | Overlap between adjacent chunks                   |
+| `MAX_FILE_SIZE_BYTES`  | `1000000`                | Files larger than this are skipped                |
+| `WATCHER_DEBOUNCE_MS`  | `2000`                   | Quiet period after a save before re-indexing      |
+| `MIN_SCORE`            | `0.8`                    | Minimum similarity score for search results (0-1) |
+| `PORT`                 | `3000`                   | HTTP health/metrics port                          |
+| `CONFIG_PATH`          | —                        | Path to a `config.yml` for multi-repo setups      |
 
 ### Multi-repo config.yml
 
@@ -263,11 +264,11 @@ repos:
 
 ### Supported embedding models
 
-| Model | Dimensions | Notes |
-|---|---|---|
-| `fast-bge-small-en-v1.5` | 384 | Default — fast, low memory |
-| `fast-bge-base-en-v1.5` | 768 | Better recall, more memory |
-| `multilingual-e5-large` | 1024 | Multi-language codebases |
+| Model                    | Dimensions | Notes                      |
+| ------------------------ | ---------- | -------------------------- |
+| `fast-bge-small-en-v1.5` | 384        | Default — fast, low memory |
+| `fast-bge-base-en-v1.5`  | 768        | Better recall, more memory |
+| `multilingual-e5-large`  | 1024       | Multi-language codebases   |
 
 ---
 
@@ -275,14 +276,14 @@ repos:
 
 The service also exposes a REST API (default port 3000):
 
-| Endpoint | Description |
-|---|---|
-| `GET /health` | `{"status":"ok"}` when ready |
-| `GET /metrics` | Prometheus metrics |
-| `GET /repos` | List all indexed repos |
-| `GET /repos/:id/status` | Indexing status for a repo |
-| `POST /repos/:id/search` | REST search (same as MCP `search_code`) |
-| `POST /repos/:id/reindex` | Trigger a full re-index |
+| Endpoint                  | Description                             |
+| ------------------------- | --------------------------------------- |
+| `GET /health`             | `{"status":"ok"}` when ready            |
+| `GET /metrics`            | Prometheus metrics                      |
+| `GET /repos`              | List all indexed repos                  |
+| `GET /repos/:id/status`   | Indexing status for a repo              |
+| `POST /repos/:id/search`  | REST search (same as MCP `search_code`) |
+| `POST /repos/:id/reindex` | Trigger a full re-index                 |
 
 ---
 

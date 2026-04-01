@@ -59,12 +59,14 @@ tests/
 ## Key behaviours to understand
 
 **Indexing flow on file save:**
+
 1. chokidar fires `change` event
 2. `awaitWriteFinish` waits for the OS file handle to close
 3. Per-file debounce timer (default 2000ms) resets on each event — prevents embedding storms during rapid saves or formatter runs
 4. `coordinator.indexFile()` deletes old vectors for the file, re-chunks, re-embeds in batch, upserts new vectors
 
 **Incremental vs full index:**
+
 - `coordinator.fullIndex()` — called once on startup, scans all files
 - `coordinator.indexFile()` — called by the watcher on change/add, called by `trigger_reindex` MCP tool
 
@@ -111,11 +113,11 @@ Dry run: `DRY_RUN=1 ./scripts/publish.sh` or `./scripts/publish.sh --dry-run`
 
 ## Required secrets (GitHub)
 
-| Secret | Used for |
-|---|---|
-| `NPM_TOKEN` | `npm publish` in release workflow |
-| `MCP_REGISTRY_TOKEN` | `mcp-publisher publish` |
-| `VSCE_TOKEN` | VS Code Marketplace (once `vsce-extension/` is built) |
+| Secret               | Used for                                              |
+| -------------------- | ----------------------------------------------------- |
+| `NPM_TOKEN`          | `npm publish` in release workflow                     |
+| `MCP_REGISTRY_TOKEN` | `mcp-publisher publish`                               |
+| `VSCE_TOKEN`         | VS Code Marketplace (once `vsce-extension/` is built) |
 
 ## Things to watch out for
 
