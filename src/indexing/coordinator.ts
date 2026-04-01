@@ -46,6 +46,8 @@ export class IndexingCoordinator {
     const timer = indexingDurationSeconds.startTimer({ repo_id: repoId });
     const startedAt = Date.now();
     try {
+      await adapter.deleteCollection();
+      await adapter.initialize();
       await adapter.markIndexingIncomplete(startedAt);
       const files = await scanRepo(repo, this.config.maxFileSizeBytes);
       this.log.info({ repoId, fileCount: files.length }, 'Starting full index');

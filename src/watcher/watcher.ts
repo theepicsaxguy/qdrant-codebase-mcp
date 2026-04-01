@@ -1,4 +1,5 @@
 import chokidar, { type FSWatcher } from 'chokidar';
+import * as path from 'path';
 import type { QdrantAdapter } from '../qdrant/adapter';
 import type { IndexingCoordinator } from '../indexing/coordinator';
 import { isIndexable } from '../scanner/scanner';
@@ -137,6 +138,13 @@ export class FileWatcherManager {
     message: string
   ): void {
     watcher.on(eventName, (filePath: string) => {
+      if (this.isGitIgnoreFile(filePath, context.repo)) {
+        context.debounce(filePath, 'Git ignore rules changed', async () => {
+          await this.coordinator.fullIndex(context.repo.repoId);
+        });
+        return;
+      }
+
       if (!this.isTrackedFile(filePath, context.repo)) {
         return;
       }
@@ -149,10 +157,28 @@ export class FileWatcherManager {
 
   private registerDeleteEvent(watcher: FSWatcher, context: WatcherContext): void {
     watcher.on('unlink', (filePath: string) => {
+      if (this.isGitIgnoreFile(filePath, context.repo)) {
+        context.debounce(filePath, 'Git ignore rules changed', async () => {
+          await this.coordinator.fullIndex(context.repo.repoId);
+        });
+        return;
+      }
+
       context.debounce(filePath, 'File deleted', async () => {
         await this.coordinator.deleteFile(filePath, context.repo, context.adapter);
       });
     });
+  }
+
+  private isGitIgnoreFile(filePath: string, repo: RepoConfig): boolean {
+    const root = path.resolve(repo.rootPath);
+    const absolutePath = path.resolve(filePath);
+    if (!absolutePath.startsWith(root + path.sep) && absolutePath !== root) {
+      return false;
+    }
+
+    const relativePath = path.relative(root, absolutePath);
+    return path.basename(relativePath) === '.gitignore';
   }
 
   private isTrackedFile(filePath: string, repo: RepoConfig): boolean {

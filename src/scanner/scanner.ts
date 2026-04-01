@@ -5,6 +5,7 @@ import fg from 'fast-glob';
 import type { RepoConfig } from '../config/schema';
 import { logger, type Logger } from '../logger';
 import { normalizePath } from '../utils/hashing';
+import { isGitIgnored, listGitVisibleFiles } from './git';
 
 const DEFAULT_INCLUDE = [
   '**/*.cs',
@@ -79,6 +80,23 @@ function filterSafeFiles(files: string[], root: string): string[] {
   });
 }
 
+function matchesRepoPatterns(filePath: string, root: string, repo: RepoConfig): boolean {
+  const rel = normalizePath(path.relative(root, filePath));
+  const include = repo.include ?? DEFAULT_INCLUDE;
+  const ignore = [...DEFAULT_IGNORE, ...(repo.ignore ?? [])];
+
+  if (!micromatch([rel], include).length) return false;
+  return !micromatch([rel], ignore).length;
+}
+
+function filterByRepoPatterns(files: string[], root: string, repo: RepoConfig): string[] {
+  return files.filter((filePath) => matchesRepoPatterns(filePath, root, repo));
+}
+
+function isWithinRoot(filePath: string, root: string): boolean {
+  return filePath.startsWith(root + path.sep) || filePath === root;
+}
+
 function filterBySize(safe: string[], limit: number, log: Logger): string[] {
   const result: string[] = [];
   for (const f of safe) {
@@ -110,18 +128,21 @@ export async function scanRepo(repo: RepoConfig, maxFileSizeBytes: number): Prom
 
   log.info({ root, patterns: include.length }, 'Scanning repo');
 
-  const files = await fg(include, {
-    cwd: root,
-    absolute: true,
-    ignore,
-    onlyFiles: true,
-    followSymbolicLinks: false,
-    suppressErrors: true,
-    dot: false,
-  });
+  const files =
+    (await listGitVisibleFiles(root)) ??
+    (await fg(include, {
+      cwd: root,
+      absolute: true,
+      ignore,
+      onlyFiles: true,
+      followSymbolicLinks: false,
+      suppressErrors: true,
+      dot: false,
+    }));
 
   const safe = filterSafeFiles(files, root);
-  const result = filterBySize(safe, limit, log);
+  const matched = filterByRepoPatterns(safe, root, repo);
+  const result = filterBySize(matched, limit, log);
 
   log.info({ count: result.length }, 'Scan complete');
   return result;
@@ -137,14 +158,9 @@ export function isIndexable(
   const abs = path.resolve(filePath);
 
   // Path traversal guard
-  if (!abs.startsWith(root + path.sep) && abs !== root) return false;
-
-  const rel = normalizePath(path.relative(root, abs));
-  const include = repo.include ?? DEFAULT_INCLUDE;
-  const ignore = [...DEFAULT_IGNORE, ...(repo.ignore ?? [])];
-
-  if (!micromatch([rel], include).length) return false;
-  if (micromatch([rel], ignore).length) return false;
+  if (!isWithinRoot(abs, root)) return false;
+  if (!matchesRepoPatterns(abs, root, repo)) return false;
+  if (isGitIgnored(root, abs)) return false;
 
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename
