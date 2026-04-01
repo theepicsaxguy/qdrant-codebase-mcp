@@ -44,12 +44,17 @@
     "mcp:dev": "tsx src/mcp-entry.ts",
     "typecheck": "tsc --noEmit",
     "knip": "knip",
-    "prepare": "husky"
+    "prepare": "husky",
+    "audit": "npm audit --audit-level=moderate",
+    "prepublishOnly": "npm run typecheck && npm run lint && npm run knip && npm run audit && npm test && npm run build"
   },
   "lint-staged": {
     "*.ts": [
       "eslint --max-warnings 0",
       "prettier --check"
+    ],
+    "*": [
+      "secretlint"
     ]
   },
   "dependencies": {
@@ -68,6 +73,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@secretlint/secretlint-rule-preset-recommend": "^11.4.1",
     "@types/js-yaml": "^4.0.9",
     "@types/micromatch": "^4.0.10",
     "@types/node": "^25.5.0",
@@ -75,6 +81,7 @@
     "@typescript-eslint/eslint-plugin": "^8.58.0",
     "@typescript-eslint/parser": "^8.58.0",
     "eslint": "^10.1.0",
+    "eslint-plugin-security": "^4.0.0",
     "eslint-plugin-sonarjs": "^4.0.2",
     "eslint-plugin-unicorn": "^64.0.0",
     "eslint-plugin-unused-imports": "^4.4.1",
@@ -82,6 +89,7 @@
     "knip": "^6.1.1",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
+    "secretlint": "^11.4.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"

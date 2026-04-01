@@ -1,0 +1,44 @@
+{
+  "$schema": "https://registry.modelcontextprotocol.io/schema/server.json",
+  "name": "qdrant-codebase-query",
+  "displayName": "Qdrant Codebase Query",
+  "description": "Semantic code search for AI assistants — continuously indexes your codebase into Qdrant and exposes vector search as an MCP tool.",
+  "version": "0.1.0",
+  "vendor": "theepicsaxguy",
+  "sourceUrl": "https://github.com/theepicsaxguy/qdrant-codebase-query",
+  "license": "MIT",
+  "runtime": {
+    "type": "nodejs",
+    "command": "npx",
+    "args": ["-y", "qdrant-codebase-query"]
+  },
+  "configuration": {
+    "QDRANT_URL": {
+      "type": "string",
+      "description": "URL of your Qdrant instance",
+      "default": "http://localhost:6333",
+      "required": true
+    },
+    "QDRANT_API_KEY": {
+      "type": "string",
+      "description": "Qdrant API key (leave empty for local instances)",
+      "secret": true,
+      "required": false
+    },
+    "ROOT_PATH": {
+      "type": "string",
+      "description": "Absolute path to the repository to index",
+      "required": true
+    }
+  },
+  "tools": [
+    {
+      "name": "search_codebase",
+      "description": "Perform semantic vector search over the indexed codebase"
+    },
+    {
+      "name": "index_codebase",
+      "description": "Trigger a full re-index of the repository"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import security from 'eslint-plugin-security';
 import sonarjs from 'eslint-plugin-sonarjs';
 import unicorn from 'eslint-plugin-unicorn';
 import unusedImports from 'eslint-plugin-unused-imports';
@@ -12,6 +13,7 @@ export default [
     files: ['src/**/*.ts'],
     plugins: {
       '@typescript-eslint': typescriptEslint,
+      security,
       sonarjs,
       unicorn,
       'unused-imports': unusedImports,
@@ -113,6 +115,20 @@ export default [
       'unicorn/prefer-type-error': 'error',
       'unicorn/no-process-exit': 'error',           // use process.exitCode instead
       'unicorn/prefer-logical-operator-over-ternary': 'error',
+
+      // ── Security ──────────────────────────────────────────────────────────
+      ...security.configs.recommended.rules,
+      'security/detect-object-injection': 'error',   // bracket access with user input
+      'security/detect-non-literal-fs-filename': 'error', // path traversal
+      'security/detect-non-literal-regexp': 'error', // ReDoS
+      'security/detect-unsafe-regex': 'error',       // catastrophic backtracking
+      'security/detect-buffer-noassert': 'error',
+      'security/detect-child-process': 'error',      // shell injection
+      'security/detect-disable-mustache-escape': 'error',
+      'security/detect-eval-with-expression': 'error',
+      'security/detect-new-buffer': 'error',
+      'security/detect-possible-timing-attacks': 'error',
+      'security/detect-pseudoRandomBytes': 'error',  // use crypto.randomBytes
     },
   },
   // Tests use their own tsconfig which includes both src and tests
