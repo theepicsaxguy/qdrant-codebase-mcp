@@ -14,10 +14,10 @@
     }
   ],
   "servers": {
-    "qdrant-codebase-query": {
+    "qdrant-codebase-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "qdrant-codebase-query"],
+      "args": ["tsx", "${workspaceFolder}/src/mcp-entry.ts"],
       "env": {
         "QDRANT_URL": "${input:qdrantUrl}",
         "QDRANT_API_KEY": "${input:qdrantApiKey}",

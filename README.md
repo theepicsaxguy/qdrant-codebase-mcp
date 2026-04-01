@@ -331,11 +331,50 @@ cd qdrant-codebase-mcp
 npm install
 cp config.example.yml config.yml   # fill in your Qdrant URL
 
-npm run dev          # tsx watch — rebuilds on file save
 npm run typecheck    # tsc --noEmit
 npm run lint         # ESLint (zero warnings)
 npm test             # unit tests
 npm run build        # compile to dist/
+```
+
+### Running the MCP server from source
+
+Point your MCP client at the local source instead of the published package.
+The `mcp:dev` script uses `tsx` so changes are reflected without a rebuild.
+
+**VS Code — `.vscode/mcp.json`:**
+
+```json
+{
+  "servers": {
+    "qdrant-codebase-mcp-dev": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["tsx", "/absolute/path/to/qdrant-codebase-mcp/src/mcp-entry.ts"],
+      "env": {
+        "QDRANT_URL": "http://localhost:6333",
+        "ROOT_PATH": "${workspaceFolder}"
+      }
+    }
+  }
+}
+```
+
+**Claude Code:**
+
+```bash
+claude mcp add qdrant-codebase-mcp-dev \
+  -e QDRANT_URL=http://localhost:6333 \
+  -e ROOT_PATH=/path/to/your/project \
+  -- npx tsx /absolute/path/to/qdrant-codebase-mcp/src/mcp-entry.ts
+```
+
+**Any other client (generic stdio):**
+
+```bash
+QDRANT_URL=http://localhost:6333 \
+ROOT_PATH=/path/to/your/project \
+npx tsx src/mcp-entry.ts
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor guide including commit conventions, changeset requirements, and the release process.
