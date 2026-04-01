@@ -69,7 +69,7 @@ function buildEnvConfig(repo: RepoConfig): Record<string, unknown> {
     embeddingBatchSize: getEnvNumber(process.env['EMBEDDING_BATCH_SIZE'], 64),
     watcherDebounceMs: getEnvNumber(process.env['WATCHER_DEBOUNCE_MS'], 300),
     maxFileSizeBytes: getEnvNumber(process.env['MAX_FILE_SIZE_BYTES'], 1_000_000),
-    minScore: getEnvNumber(process.env['MIN_SCORE'], 0.8),
+    minScore: getEnvNumber(process.env['MIN_SCORE'], 0.78),
     port: getEnvNumber(process.env['PORT'], 3000),
     host: process.env['HOST'] ?? '0.0.0.0',
     repos: [repo],

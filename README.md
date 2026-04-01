@@ -239,7 +239,7 @@ All settings are via **environment variables** or an optional `config.yml`.
 | `CHUNK_OVERLAP_LINES`  | `20`                     | Overlap between adjacent chunks                   |
 | `MAX_FILE_SIZE_BYTES`  | `1000000`                | Files larger than this are skipped                |
 | `WATCHER_DEBOUNCE_MS`  | `2000`                   | Quiet period after a save before re-indexing      |
-| `MIN_SCORE`            | `0.8`                    | Minimum similarity score for search results (0-1) |
+| `MIN_SCORE`            | `0.78`                   | Minimum similarity score for search results (0-1) |
 | `PORT`                 | `3000`                   | HTTP health/metrics port                          |
 | `CONFIG_PATH`          | —                        | Path to a `config.yml` for multi-repo setups      |
 
