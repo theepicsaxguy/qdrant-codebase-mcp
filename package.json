@@ -1,15 +1,19 @@
 {
-  "name": "qdrant-codebase-query",
+  "name": "qdrant-codebase-mcp",
   "version": "0.1.0",
-  "description": "Semantic code search for AI assistants — indexes your codebase into Qdrant and exposes it as an MCP tool via `npx qdrant-codebase-query`",
+  "description": "MCP server that indexes your codebase into Qdrant and exposes semantic vector search — enabling AI assistants to find relevant code by meaning, not keyword.",
   "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "bin": {
-    "qdrant-codebase-query": "./dist/mcp-entry.js"
+    "qdrant-codebase-mcp": "./dist/mcp-entry.js"
   },
   "files": [
     "dist/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "SECURITY.md"
   ],
   "publishConfig": {
     "access": "public"
@@ -17,18 +21,25 @@
   "keywords": [
     "mcp",
     "qdrant",
+    "codebase-indexing",
     "semantic-search",
     "code-search",
     "embeddings",
     "fastembed",
     "ai",
     "llm",
-    "copilot"
+    "copilot",
+    "roo-code",
+    "vector-search"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/theepicsaxguy/qdrant-codebase-query.git"
+    "url": "https://github.com/theepicsaxguy/qdrant-codebase-mcp.git"
   },
+  "bugs": {
+    "url": "https://github.com/theepicsaxguy/qdrant-codebase-mcp/issues"
+  },
+  "homepage": "https://github.com/theepicsaxguy/qdrant-codebase-mcp#readme",
   "license": "MIT",
   "scripts": {
     "build": "tsc",
@@ -44,8 +55,11 @@
     "mcp:dev": "tsx src/mcp-entry.ts",
     "typecheck": "tsc --noEmit",
     "knip": "knip",
-    "prepare": "husky",
     "audit": "npm audit --audit-level=moderate",
+    "changeset": "changeset",
+    "version:packages": "changeset version",
+    "release": "npm run build && npm publish",
+    "prepare": "[ -d .git ] && husky || true",
     "prepublishOnly": "npm run typecheck && npm run lint && npm run knip && npm run audit && npm test && npm run build"
   },
   "lint-staged": {
@@ -73,6 +87,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@secretlint/secretlint-rule-preset-recommend": "^11.4.1",
     "@types/js-yaml": "^4.0.9",
     "@types/micromatch": "^4.0.10",

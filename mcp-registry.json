@@ -1,44 +1,39 @@
 {
-  "$schema": "https://registry.modelcontextprotocol.io/schema/server.json",
-  "name": "qdrant-codebase-query",
-  "displayName": "Qdrant Codebase Query",
-  "description": "Semantic code search for AI assistants — continuously indexes your codebase into Qdrant and exposes vector search as an MCP tool.",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.theepicsaxguy/qdrant-codebase-mcp",
+  "title": "Qdrant Codebase Indexing",
+  "description": "MCP server that continuously indexes your codebase into Qdrant and exposes semantic vector search — enabling AI assistants to find relevant code by meaning, not keyword.",
   "version": "0.1.0",
-  "vendor": "theepicsaxguy",
-  "sourceUrl": "https://github.com/theepicsaxguy/qdrant-codebase-query",
-  "license": "MIT",
-  "runtime": {
-    "type": "nodejs",
-    "command": "npx",
-    "args": ["-y", "qdrant-codebase-query"]
+  "repository": {
+    "url": "https://github.com/theepicsaxguy/qdrant-codebase-mcp"
   },
-  "configuration": {
-    "QDRANT_URL": {
-      "type": "string",
-      "description": "URL of your Qdrant instance",
-      "default": "http://localhost:6333",
-      "required": true
-    },
-    "QDRANT_API_KEY": {
-      "type": "string",
-      "description": "Qdrant API key (leave empty for local instances)",
-      "secret": true,
-      "required": false
-    },
-    "ROOT_PATH": {
-      "type": "string",
-      "description": "Absolute path to the repository to index",
-      "required": true
-    }
-  },
-  "tools": [
+  "packages": [
     {
-      "name": "search_codebase",
-      "description": "Perform semantic vector search over the indexed codebase"
-    },
-    {
-      "name": "index_codebase",
-      "description": "Trigger a full re-index of the repository"
+      "registryType": "npm",
+      "identifier": "qdrant-codebase-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "env": [
+        {
+          "name": "QDRANT_URL",
+          "description": "URL of your Qdrant instance (e.g. http://localhost:6333 or your Qdrant Cloud URL)",
+          "default": "http://localhost:6333",
+          "required": true
+        },
+        {
+          "name": "QDRANT_API_KEY",
+          "description": "Qdrant API key — leave empty for local unauthenticated instances",
+          "secret": true,
+          "required": false
+        },
+        {
+          "name": "ROOT_PATH",
+          "description": "Absolute path to the repository root to index",
+          "required": true
+        }
+      ]
     }
   ]
 }

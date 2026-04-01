@@ -1,0 +1,14 @@
+# Global owners — required reviewers for every PR
+* @theepicsaxguy
+
+# Core infrastructure changes require extra scrutiny
+.github/                  @theepicsaxguy
+.husky/                   @theepicsaxguy
+eslint.config.mjs         @theepicsaxguy
+tsconfig.json             @theepicsaxguy
+package.json              @theepicsaxguy
+
+# Security-sensitive files
+SECURITY.md               @theepicsaxguy
+.secretlintrc.json        @theepicsaxguy
+.secretlintignore         @theepicsaxguy
