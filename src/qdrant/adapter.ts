@@ -36,7 +36,7 @@ export class QdrantAdapter {
         https: u.protocol === 'https:',
         prefix: u.pathname === '/' ? undefined : u.pathname.replace(/\/+$/, ''),
         apiKey,
-        headers: { 'User-Agent': 'semantic-code-index' },
+        headers: { 'User-Agent': 'qdrant-codebase-query' },
       });
     } catch {
       this.client = new QdrantClient({ url: qdrantUrl, apiKey });

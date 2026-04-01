@@ -13,9 +13,9 @@ services:
       timeout: 5s
       retries: 5
 
-  semantic-code-index:
+  qdrant-codebase-query:
     build: .
-    container_name: semantic-code-index
+    container_name: qdrant-codebase-query
     ports:
       - "3000:3000"
     volumes:

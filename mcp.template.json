@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "qdrant-codebase-query": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/path/to/qdrant-codebase-query/dist/mcp-entry.js"
+      ],
+      "env": {
+        "SEARCH_SERVICE_URL": "http://localhost:3000"
+      }
+    }
+  }
+}

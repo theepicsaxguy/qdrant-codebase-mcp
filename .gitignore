@@ -6,5 +6,7 @@ models/
 .env
 .env.local
 coverage/
+# config.yml may contain API keys — use config.example.yml as template
+config.yml
 
 config.yml

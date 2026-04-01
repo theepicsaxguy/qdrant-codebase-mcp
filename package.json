@@ -12,9 +12,12 @@
     "test": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:all": "vitest run",
-    "test:watch": "vitest tests/unit"
+    "test:watch": "vitest tests/unit",
+    "mcp": "node dist/mcp-entry.js",
+    "mcp:dev": "tsx src/mcp-entry.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@qdrant/js-client-rest": "^1.17.0",
     "chokidar": "^5.0.0",
     "fast-glob": "^3.3.3",

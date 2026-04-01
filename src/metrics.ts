@@ -5,7 +5,7 @@ export const registry = new client.Registry();
 client.collectDefaultMetrics({
   register: registry,
   prefix: 'sci_',
-  labels: { service: 'semantic-code-index' },
+  labels: { service: 'qdrant-codebase-query' },
 });
 
 export const filesIndexedTotal = new client.Counter({

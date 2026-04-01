@@ -7,7 +7,7 @@ function createLogger() {
     transport: isDev
       ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:standard' } }
       : undefined,
-    base: { service: 'semantic-code-index' },
+    base: { service: 'qdrant-codebase-query' },
   });
 }
 

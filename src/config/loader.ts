@@ -1,11 +1,21 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import * as yaml from 'js-yaml';
 import { AppConfig, AppConfigSchema } from './schema';
+
+function expandPath(p: string, configDir: string): string {
+  if (p.startsWith('~/') || p === '~') {
+    return path.join(os.homedir(), p.slice(2));
+  }
+  if (path.isAbsolute(p)) return p;
+  return path.resolve(configDir, p);
+}
 
 export function loadConfig(configPath?: string): AppConfig {
   const filePath = configPath ?? process.env['CONFIG_PATH'] ?? 'config.yml';
   const resolved = path.resolve(filePath);
+  const configDir = path.dirname(resolved);
 
   if (!fs.existsSync(resolved)) {
     throw new Error(`Config file not found: ${resolved}`);
@@ -26,15 +36,21 @@ export function loadConfig(configPath?: string): AppConfig {
     throw new Error(`Invalid config:\n${issues}`);
   }
 
-  // Validate repo root paths
-  for (const repo of result.data.repos) {
-    const abs = path.resolve(repo.rootPath);
+  const cfg = result.data;
+
+  // Environment variable overrides (take precedence over config file)
+  if (process.env['QDRANT_URL']) cfg.qdrantUrl = process.env['QDRANT_URL'];
+  if (process.env['QDRANT_API_KEY']) cfg.qdrantApiKey = process.env['QDRANT_API_KEY'];
+  if (process.env['PORT']) cfg.port = Number(process.env['PORT']);
+
+  // Validate and expand repo root paths
+  for (const repo of cfg.repos) {
+    const abs = expandPath(repo.rootPath, configDir);
     if (!fs.existsSync(abs)) {
       throw new Error(`Repo root path does not exist: ${abs} (repoId: ${repo.repoId})`);
     }
-    // Normalise rootPath to absolute
     repo.rootPath = abs;
   }
 
-  return result.data;
+  return cfg;
 }

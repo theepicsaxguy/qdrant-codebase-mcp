@@ -25,8 +25,13 @@ async function main(): Promise<void> {
       embedding.vectorSize,
       config.qdrantApiKey
     );
-    await adapter.ping().catch(() => {
-      throw new Error(`Cannot connect to Qdrant at ${config.qdrantUrl}`);
+    await adapter.ping().catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      const isAuth = msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized') || msg.includes('Forbidden');
+      const hint = isAuth
+        ? ' — authentication failed. Set QDRANT_API_KEY env var or qdrantApiKey in config.yml'
+        : ` — check that Qdrant is reachable and the API key is correct.\n  Original error: ${msg}`;
+      throw new Error(`Cannot connect to Qdrant at ${config.qdrantUrl}${hint}`);
     });
     await adapter.initialize();
     qdrantAdapters.set(repo.repoId, adapter);

@@ -29,7 +29,7 @@ export class EmbeddingAdapter {
     this.log.info({ model: this._modelName }, 'Loading FastEmbed model');
 
     this.model = await FlagEmbedding.init({
-      model: this._modelName as EmbeddingModel,
+      model: this._modelName as Exclude<EmbeddingModel, EmbeddingModel.CUSTOM>,
       cacheDir: process.env['MODEL_CACHE_DIR'] ?? './models',
     });
 
