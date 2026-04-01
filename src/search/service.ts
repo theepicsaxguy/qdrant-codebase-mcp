@@ -1,5 +1,5 @@
-import { QdrantAdapter } from '../qdrant/adapter';
-import { EmbeddingAdapter } from '../embedding/adapter';
+import type { QdrantAdapter } from '../qdrant/adapter';
+import type { EmbeddingAdapter } from '../embedding/adapter';
 import { logger } from '../logger';
 import { searchRequestsTotal, searchLatencySeconds } from '../metrics';
 import type { SearchRequest, SearchResponse } from '../types';
@@ -20,44 +20,10 @@ export class SearchService {
 
     try {
       const queryVector = await this.embedding.embedQuery(req.query);
-
-      if (repoId) {
-        const adapter = this.qdrantAdapters.get(repoId);
-        if (!adapter) throw new Error(`Unknown repoId: ${repoId}`);
-
-        const results = await adapter.search({
-          queryVector,
-          directoryPrefix: req.directoryPrefix,
-          language: req.language,
-          limit: req.limit ?? 10,
-          minScore: req.minScore ?? 0.45,
-        });
-
-        searchRequestsTotal.inc({ repo_id: repoId, status: 'success' });
-        return { results };
-      }
-
-      // Cross-repo search
-      const allResults = await Promise.all(
-        [...this.qdrantAdapters.entries()].map(async ([rid, adapter]) => {
-          const res = await adapter.search({
-            queryVector,
-            directoryPrefix: req.directoryPrefix,
-            language: req.language,
-            limit: req.limit ?? 10,
-            minScore: req.minScore ?? 0.45,
-          });
-          searchRequestsTotal.inc({ repo_id: rid, status: 'success' });
-          return res;
-        })
-      );
-
-      const merged = allResults
-        .flat()
-        .sort((a, b) => b.score - a.score)
-        .slice(0, req.limit ?? 10);
-
-      return { results: merged };
+      const results = repoId
+        ? await this.searchSingleRepo(repoId, req, queryVector)
+        : await this.searchAcrossRepos(req, queryVector);
+      return { results };
     } catch (err) {
       searchRequestsTotal.inc({ repo_id: repoId ?? 'global', status: 'error' });
       this.log.error({ err, req }, 'Search failed');
@@ -65,5 +31,51 @@ export class SearchService {
     } finally {
       end();
     }
+  }
+
+  private async searchSingleRepo(
+    repoId: string,
+    req: SearchRequest,
+    queryVector: number[]
+  ): Promise<SearchResponse['results']> {
+    const adapter = this.qdrantAdapters.get(repoId);
+    if (!adapter) {
+      throw new Error(`Unknown repoId: ${repoId}`);
+    }
+
+    const results = await adapter.search(this.buildSearchParams(req, queryVector));
+    searchRequestsTotal.inc({ repo_id: repoId, status: 'success' });
+    return results;
+  }
+
+  private async searchAcrossRepos(
+    req: SearchRequest,
+    queryVector: number[]
+  ): Promise<SearchResponse['results']> {
+    const allResults = await Promise.all(
+      [...this.qdrantAdapters.entries()].map(async ([repoId, adapter]) => {
+        const results = await adapter.search(this.buildSearchParams(req, queryVector));
+        searchRequestsTotal.inc({ repo_id: repoId, status: 'success' });
+        return results;
+      })
+    );
+
+    return allResults
+      .flat()
+      .sort((left, right) => right.score - left.score)
+      .slice(0, req.limit ?? 10);
+  }
+
+  private buildSearchParams(
+    req: SearchRequest,
+    queryVector: number[]
+  ): Parameters<QdrantAdapter['search']>[0] {
+    return {
+      queryVector,
+      directoryPrefix: req.directoryPrefix,
+      language: req.language,
+      limit: req.limit ?? 10,
+      minScore: req.minScore ?? 0.45,
+    };
   }
 }

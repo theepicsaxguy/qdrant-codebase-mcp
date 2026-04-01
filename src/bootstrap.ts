@@ -45,7 +45,10 @@ export async function bootstrap(config: AppConfig): Promise<ServiceBundle> {
     await adapter.initialize();
     qdrantAdapters.set(repo.repoId, adapter);
   }
-  logger.info({ repos: config.repos.map((r: { repoId: string }) => r.repoId) }, 'Qdrant adapters ready');
+  logger.info(
+    { repos: config.repos.map((r: { repoId: string }) => r.repoId) },
+    'Qdrant adapters ready'
+  );
 
   // 3. Build services
   const coordinator = new IndexingCoordinator(config, qdrantAdapters, embedding);
@@ -61,8 +64,8 @@ export function startIndexing(bundle: ServiceBundle): void {
   watcherManager.startAll();
 
   for (const repo of config.repos) {
-    coordinator.fullIndex(repo.repoId).catch((err: unknown) =>
-      logger.error({ repoId: repo.repoId, err }, 'Initial indexing failed')
-    );
+    coordinator.fullIndex(repo.repoId).catch((err: unknown) => {
+      logger.error({ repoId: repo.repoId, err }, 'Initial indexing failed');
+    });
   }
 }

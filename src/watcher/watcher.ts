@@ -1,7 +1,6 @@
-import chokidar from 'chokidar';
-import type { FSWatcher } from 'chokidar';
-import { QdrantAdapter } from '../qdrant/adapter';
-import { IndexingCoordinator } from '../indexing/coordinator';
+import chokidar, { type FSWatcher } from 'chokidar';
+import type { QdrantAdapter } from '../qdrant/adapter';
+import type { IndexingCoordinator } from '../indexing/coordinator';
 import { isIndexable } from '../scanner/scanner';
 import { logger } from '../logger';
 import type { AppConfig, RepoConfig } from '../config/schema';
@@ -10,6 +9,13 @@ interface WatcherEntry {
   watcher: FSWatcher;
   repoId: string;
   debounceTimers: Map<string, ReturnType<typeof setTimeout>>;
+}
+
+interface WatcherContext {
+  repo: RepoConfig;
+  adapter: QdrantAdapter;
+  log: typeof logger;
+  debounce: (filePath: string, action: () => Promise<void>) => void;
 }
 
 export class FileWatcherManager {
@@ -44,49 +50,9 @@ export class FileWatcherManager {
     }
 
     const debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
-
-    const watcher = chokidar.watch(repo.rootPath, {
-      persistent: true,
-      ignoreInitial: true,
-      followSymlinks: false,
-      depth: 99,
-      awaitWriteFinish: {
-        stabilityThreshold: this.config.watcherDebounceMs,
-        pollInterval: 100,
-      },
-      atomic: true,
-    });
-
-    const debounce = (filePath: string, action: () => Promise<void>): void => {
-      const existing = debounceTimers.get(filePath);
-      if (existing) clearTimeout(existing);
-      debounceTimers.set(
-        filePath,
-        setTimeout(() => {
-          debounceTimers.delete(filePath);
-          action().catch((err) => log.error({ filePath, err }, 'Debounced action failed'));
-        }, this.config.watcherDebounceMs)
-      );
-    };
-
-    watcher
-      .on('add', (filePath: string) => {
-        if (!isIndexable(filePath, repo.rootPath, repo, this.config.maxFileSizeBytes)) return;
-        log.debug({ filePath }, 'File added');
-        debounce(filePath, () => this.coordinator.indexFile(filePath, repo, adapter));
-      })
-      .on('change', (filePath: string) => {
-        if (!isIndexable(filePath, repo.rootPath, repo, this.config.maxFileSizeBytes)) return;
-        log.debug({ filePath }, 'File changed');
-        debounce(filePath, () => this.coordinator.indexFile(filePath, repo, adapter));
-      })
-      .on('unlink', (filePath: string) => {
-        log.debug({ filePath }, 'File deleted');
-        debounce(filePath, () => this.coordinator.deleteFile(filePath, repo, adapter));
-      })
-      .on('error', (err: unknown) => {
-        log.error({ err }, 'Watcher error');
-      });
+    const watcher = this.createWatcher(repo);
+    const debounce = this.createDebounce(log, debounceTimers);
+    this.registerWatcherEvents(watcher, { repo, adapter, log, debounce });
 
     this.watchers.set(repo.repoId, { watcher, repoId: repo.repoId, debounceTimers });
     log.info({ path: repo.rootPath }, 'Watcher started');
@@ -107,5 +73,81 @@ export class FileWatcherManager {
       }
     }
     this.watchers.clear();
+  }
+
+  private createWatcher(repo: RepoConfig): FSWatcher {
+    return chokidar.watch(repo.rootPath, {
+      persistent: true,
+      ignoreInitial: true,
+      followSymlinks: false,
+      depth: 99,
+      awaitWriteFinish: {
+        stabilityThreshold: this.config.watcherDebounceMs,
+        pollInterval: 100,
+      },
+      atomic: true,
+    });
+  }
+
+  private createDebounce(
+    log: typeof logger,
+    debounceTimers: Map<string, ReturnType<typeof setTimeout>>
+  ): (filePath: string, action: () => Promise<void>) => void {
+    return (filePath: string, action: () => Promise<void>): void => {
+      const existing = debounceTimers.get(filePath);
+      if (existing) {
+        clearTimeout(existing);
+      }
+
+      debounceTimers.set(
+        filePath,
+        setTimeout(() => {
+          debounceTimers.delete(filePath);
+          action().catch((err) => {
+            log.error({ filePath, err }, 'Debounced action failed');
+          });
+        }, this.config.watcherDebounceMs)
+      );
+    };
+  }
+
+  private registerWatcherEvents(watcher: FSWatcher, context: WatcherContext): void {
+    this.registerIndexEvent(watcher, context, 'add', 'File added');
+    this.registerIndexEvent(watcher, context, 'change', 'File changed');
+    this.registerDeleteEvent(watcher, context);
+    watcher.on('error', (err: unknown) => {
+      context.log.error({ err }, 'Watcher error');
+    });
+  }
+
+  private registerIndexEvent(
+    watcher: FSWatcher,
+    context: WatcherContext,
+    eventName: 'add' | 'change',
+    message: string
+  ): void {
+    watcher.on(eventName, (filePath: string) => {
+      if (!this.isTrackedFile(filePath, context.repo)) {
+        return;
+      }
+
+      context.log.debug({ filePath }, message);
+      context.debounce(filePath, async () => {
+        await this.coordinator.indexFile(filePath, context.repo, context.adapter);
+      });
+    });
+  }
+
+  private registerDeleteEvent(watcher: FSWatcher, context: WatcherContext): void {
+    watcher.on('unlink', (filePath: string) => {
+      context.log.debug({ filePath }, 'File deleted');
+      context.debounce(filePath, async () => {
+        await this.coordinator.deleteFile(filePath, context.repo, context.adapter);
+      });
+    });
+  }
+
+  private isTrackedFile(filePath: string, repo: RepoConfig): boolean {
+    return isIndexable(filePath, repo.rootPath, repo, this.config.maxFileSizeBytes);
   }
 }

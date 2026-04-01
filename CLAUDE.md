@@ -123,3 +123,5 @@ Dry run: `DRY_RUN=1 ./scripts/publish.sh` or `./scripts/publish.sh --dry-run`
 - The `prepare` script runs `husky` — it is guarded with `[ -d .git ]` so it does not break consumers who `npm install` this package
 - `pino-pretty` is a runtime dep (not dev) because the HTTP service uses it — it is listed in `ignoreDependencies` in knip.json to suppress the false-positive unused warning
 - The watcher uses `awaitWriteFinish` AND a debounce — both use `watcherDebounceMs`. Total minimum latency before indexing starts after a save is ~2× the configured value
+
+Run .husky/pre-commit before committing to ensure type checks, linting, formatting, and changeset creation are all done. The pre-commit hook will block the commit if any of these steps fail.

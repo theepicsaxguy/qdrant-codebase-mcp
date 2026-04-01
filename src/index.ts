@@ -9,20 +9,31 @@ async function main(): Promise<void> {
 
   const bundle = await bootstrap(config);
   const { coordinator, watcherManager, searchService, qdrantAdapters, embedding } = bundle;
+  const server = buildServer({
+    config,
+    qdrantAdapters,
+    embedding,
+    coordinator,
+    searchService,
+  });
 
-  const server = await buildServer(config, qdrantAdapters, embedding, coordinator, searchService);
-
-  const shutdown = async (signal: string) => {
+  const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, 'Shutdown signal received');
     await server.close();
     await watcherManager.stopAll();
     logger.info('Shutdown complete');
-    process.exit(0);
+    process.exitCode = 0;
   };
 
-  process.on('SIGTERM', () => void shutdown('SIGTERM'));
-  process.on('SIGINT', () => void shutdown('SIGINT'));
-  server.addHook('onClose', async () => { await watcherManager.stopAll(); });
+  process.on('SIGTERM', () => {
+    void shutdown('SIGTERM');
+  });
+  process.on('SIGINT', () => {
+    void shutdown('SIGINT');
+  });
+  server.addHook('onClose', async () => {
+    await watcherManager.stopAll();
+  });
 
   startIndexing(bundle);
 
@@ -32,5 +43,5 @@ async function main(): Promise<void> {
 
 main().catch((err) => {
   logger.error({ err }, 'Fatal startup error');
-  process.exit(1);
+  process.exitCode = 1;
 });

@@ -13,7 +13,13 @@ async function main(): Promise<void> {
   startIndexing(bundle);
 
   // Build MCP server that talks to services directly (no HTTP round-trip)
-  const server = createMcpServer(bundle.searchService, bundle.qdrantAdapters, config, bundle.embedding, bundle.coordinator);
+  const server = createMcpServer({
+    searchService: bundle.searchService,
+    qdrantAdapters: bundle.qdrantAdapters,
+    config,
+    embedding: bundle.embedding,
+    coordinator: bundle.coordinator,
+  });
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
@@ -22,17 +28,21 @@ async function main(): Promise<void> {
     `[qdrant-codebase-query] ready — indexing "${repo?.repoId}" into "${repo?.collectionName}" at ${config.qdrantUrl}\n`
   );
 
-  const shutdown = async () => {
+  const shutdown = async (): Promise<void> => {
     await bundle.watcherManager.stopAll();
-    process.exit(0);
+    process.exitCode = 0;
   };
-  process.on('SIGTERM', () => void shutdown());
-  process.on('SIGINT', () => void shutdown());
+  process.on('SIGTERM', () => {
+    void shutdown();
+  });
+  process.on('SIGINT', () => {
+    void shutdown();
+  });
 }
 
 main().catch((err) => {
   process.stderr.write(
     `[qdrant-codebase-query] Fatal error: ${err instanceof Error ? err.message : String(err)}\n`
   );
-  process.exit(1);
+  process.exitCode = 1;
 });
