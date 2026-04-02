@@ -95,18 +95,25 @@ async function initializeAdapterForMode(
 }
 
 export function startIndexing(bundle: ServiceBundle): void {
-  const { config, coordinator, watcherManager } = bundle;
+  const { config } = bundle;
 
   if (config.serverMode === 'search-only') {
     logger.info('Search-only mode enabled; skipping indexing and file watchers');
     return;
   }
 
-  watcherManager.startAll();
+  void startIndexAndWatch(bundle);
+}
 
-  for (const repo of config.repos) {
-    coordinator.fullIndex(repo.repoId).catch((err: unknown) => {
+async function startIndexAndWatch(bundle: ServiceBundle): Promise<void> {
+  const { config, coordinator, watcherManager } = bundle;
+  const tasks = config.repos.map(async (repo) => {
+    await coordinator.fullIndex(repo.repoId).catch((err: unknown) => {
       logger.error({ repoId: repo.repoId, err }, 'Initial indexing failed');
     });
-  }
+  });
+
+  await Promise.all(tasks);
+  watcherManager.startAll();
+  logger.info({ repos: config.repos.map((repo) => repo.repoId) }, 'Initial indexing settled');
 }

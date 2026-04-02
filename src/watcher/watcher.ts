@@ -109,7 +109,7 @@ export class FileWatcherManager {
         );
       }
 
-      log.debug(
+      log.info(
         { filePath, debounceMs: this.config.watcherDebounceMs, reason },
         'File event detected; waiting before indexing'
       );
@@ -144,6 +144,7 @@ export class FileWatcherManager {
   ): void {
     watcher.on(eventName, (filePath: string) => {
       if (this.isGitIgnoreFile(filePath, context.repo)) {
+        context.log.info({ filePath, event: eventName }, 'Watcher observed .gitignore update');
         context.debounce(filePath, 'Git ignore rules changed', async () => {
           await this.coordinator.fullIndex(context.repo.repoId);
         });
@@ -154,6 +155,7 @@ export class FileWatcherManager {
         return;
       }
 
+      context.log.info({ filePath, event: eventName }, 'Watcher observed file event');
       context.debounce(filePath, message, async () => {
         await this.coordinator.indexFile(filePath, context.repo, context.adapter);
       });
@@ -163,12 +165,14 @@ export class FileWatcherManager {
   private registerDeleteEvent(watcher: FSWatcher, context: WatcherContext): void {
     watcher.on('unlink', (filePath: string) => {
       if (this.isGitIgnoreFile(filePath, context.repo)) {
+        context.log.info({ filePath, event: 'unlink' }, 'Watcher observed .gitignore removal');
         context.debounce(filePath, 'Git ignore rules changed', async () => {
           await this.coordinator.fullIndex(context.repo.repoId);
         });
         return;
       }
 
+      context.log.info({ filePath, event: 'unlink' }, 'Watcher observed file event');
       context.debounce(filePath, 'File deleted', async () => {
         await this.coordinator.deleteFile(filePath, context.repo, context.adapter);
       });
