@@ -13,3 +13,7 @@ config.yml
 .codex*
 codex*
 *PROGRESS*
+__pycache__/
+**/__pycache__/
+*.pyc
+**/*.pyc
