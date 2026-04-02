@@ -1,6 +1,6 @@
 {
   "name": "qdrant-codebase-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server that indexes your codebase into Qdrant and exposes semantic vector search — enabling AI assistants to find relevant code by meaning, not keyword.",
   "main": "dist/index.js",
   "exports": {
