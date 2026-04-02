@@ -132,39 +132,13 @@ def build_project(source_dir: Path, npm: str) -> Path:
     if not (source_dir / "node_modules").exists():
         subprocess.run([npm, "ci"], cwd=source_dir, check=True)
 
-    if build_required(source_dir):
+    if not entrypoint.exists():
         subprocess.run([npm, "run", "build"], cwd=source_dir, check=True)
 
     if not entrypoint.exists():
         raise RuntimeError(f"Build completed without producing {entrypoint}")
 
     return entrypoint
-
-
-def build_required(source_dir: Path) -> bool:
-    entrypoint = source_dir / "dist" / "mcp-entry.js"
-    if not entrypoint.exists():
-        return True
-
-    latest_source = latest_source_mtime(source_dir)
-    if latest_source is None:
-        return False
-
-    return latest_source > entrypoint.stat().st_mtime
-
-
-def latest_source_mtime(source_dir: Path) -> float | None:
-    paths = [
-        source_dir / "package.json",
-        source_dir / "package-lock.json",
-        source_dir / "tsconfig.json",
-    ]
-    paths.extend((source_dir / "src").rglob("*.ts"))
-    existing = [path.stat().st_mtime for path in paths if path.exists()]
-    if not existing:
-        return None
-
-    return max(existing)
 
 
 def compute_cache_key(source_root: Path) -> str:

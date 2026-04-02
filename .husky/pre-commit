@@ -1,6 +1,7 @@
 npx lint-staged
 npm run typecheck
 npm run knip
+npm run test:python
 npx prettier --check "src/**/*.ts" "tests/**/*.ts"
 
 # ── Changeset guard ─────────────────────────────────────────────────────────
