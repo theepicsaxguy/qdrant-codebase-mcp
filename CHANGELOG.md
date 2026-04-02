@@ -1,5 +1,11 @@
 # qdrant-codebase-mcp
 
+## 0.1.2
+
+### Patch Changes
+
+- ccb95e0: Fix MCP stdio shutdown so Ctrl+C and host-managed stop requests terminate cleanly.
+
 ## 0.1.1
 
 ### Patch Changes
