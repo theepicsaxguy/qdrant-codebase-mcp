@@ -7,12 +7,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 from qdrant_codebase_mcp_launcher.launcher import (
+    RuntimeMetadata,
     SourceMetadata,
     build_project,
     compute_cache_key,
     git_commit_sha,
     prepare_source_checkout,
     require_command,
+    runtime_metadata_path,
     resolve_source_metadata,
     sanitize_git_url,
 )
@@ -107,12 +109,69 @@ class UvxLauncherTests(unittest.TestCase):
             (source_dir / "tsconfig.json").write_text("{}", encoding="utf-8")
             (source_dir / "src").mkdir(parents=True, exist_ok=True)
             (source_dir / "src" / "mcp-entry.ts").write_text("// source", encoding="utf-8")
+            runtime_metadata_path(source_dir).write_text(
+                '{"arch":"x64","node_modules_abi":"127","node_version":"v22.0.0","platform":"linux"}',
+                encoding="utf-8",
+            )
 
-            with patch("qdrant_codebase_mcp_launcher.launcher.subprocess.run") as run:
-                result = build_project(source_dir, "npm")
+            with patch(
+                "qdrant_codebase_mcp_launcher.launcher.resolve_runtime_metadata",
+                return_value=RuntimeMetadata(
+                    node_version="v22.0.0",
+                    node_modules_abi="127",
+                    platform="linux",
+                    arch="x64",
+                ),
+            ):
+                with patch("qdrant_codebase_mcp_launcher.launcher.subprocess.run") as run:
+                    result = build_project(source_dir, "npm", "node")
 
         self.assertEqual(result, entrypoint)
         run.assert_not_called()
+
+    def test_build_project_reinstalls_when_node_runtime_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source_dir = Path(temp_dir)
+            (source_dir / "node_modules").mkdir(exist_ok=True)
+            entrypoint = source_dir / "dist" / "mcp-entry.js"
+            entrypoint.parent.mkdir(parents=True, exist_ok=True)
+            entrypoint.write_text("// built", encoding="utf-8")
+            runtime_metadata_path(source_dir).write_text(
+                '{"arch":"x64","node_modules_abi":"115","node_version":"v20.0.0","platform":"linux"}',
+                encoding="utf-8",
+            )
+
+            def run_side_effect(*args, **kwargs):
+                command = args[0]
+                if command == ["npm", "ci"]:
+                    (source_dir / "node_modules").mkdir(exist_ok=True)
+                    return unittest.mock.Mock(returncode=0)
+                if command == ["npm", "run", "build"]:
+                    entrypoint.parent.mkdir(parents=True, exist_ok=True)
+                    entrypoint.write_text("// rebuilt", encoding="utf-8")
+                    return unittest.mock.Mock(returncode=0)
+                return unittest.mock.Mock(returncode=0)
+
+            with patch(
+                "qdrant_codebase_mcp_launcher.launcher.resolve_runtime_metadata",
+                return_value=RuntimeMetadata(
+                    node_version="v22.0.0",
+                    node_modules_abi="127",
+                    platform="linux",
+                    arch="x64",
+                ),
+            ):
+                with patch(
+                    "qdrant_codebase_mcp_launcher.launcher.subprocess.run",
+                    side_effect=run_side_effect,
+                ) as run:
+                    result = build_project(source_dir, "npm", "node")
+                    metadata = runtime_metadata_path(source_dir).read_text(encoding="utf-8")
+
+            self.assertEqual(result, entrypoint)
+            run.assert_any_call(["npm", "ci"], cwd=source_dir, check=True)
+            run.assert_any_call(["npm", "run", "build"], cwd=source_dir, check=True)
+            self.assertIn('"node_version": "v22.0.0"', metadata)
 
 
 if __name__ == "__main__":

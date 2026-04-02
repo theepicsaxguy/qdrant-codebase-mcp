@@ -17,6 +17,14 @@ class SourceMetadata:
     commit: str
 
 
+@dataclass(frozen=True)
+class RuntimeMetadata:
+    node_version: str
+    node_modules_abi: str | None
+    platform: str
+    arch: str
+
+
 def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] in {"-h", "--help"}:
         print("Usage: qdrant-codebase-mcp")
@@ -28,7 +36,7 @@ def main() -> int:
     source_root = resolve_bundled_source_root()
     source = resolve_source_metadata(source_root)
     source_dir = prepare_source_checkout(resolve_cache_dir(source.commit), source, source_root)
-    entrypoint = build_project(source_dir, npm)
+    entrypoint = build_project(source_dir, npm, node)
 
     if os.environ.get("QDRANT_CODEBASE_MCP_LAUNCHER_DRY_RUN") == "1":
         print(json.dumps({"entrypoint": str(entrypoint), "source": asdict(source)}, sort_keys=True))
@@ -130,9 +138,12 @@ def prepare_git_checkout(source_dir: Path, source: SourceMetadata) -> Path:
     return source_dir
 
 
-def build_project(source_dir: Path, npm: str) -> Path:
+def build_project(source_dir: Path, npm: str, node: str) -> Path:
     entrypoint = source_dir / "dist" / "mcp-entry.js"
-    if not (source_dir / "node_modules").exists():
+    runtime_metadata = resolve_runtime_metadata(node)
+    if should_refresh_cached_runtime(source_dir, runtime_metadata):
+        shutil.rmtree(source_dir / "node_modules", ignore_errors=True)
+        shutil.rmtree(source_dir / "dist", ignore_errors=True)
         subprocess.run([npm, "ci"], cwd=source_dir, check=True)
 
     if not entrypoint.exists():
@@ -141,6 +152,7 @@ def build_project(source_dir: Path, npm: str) -> Path:
     if not entrypoint.exists():
         raise RuntimeError(f"Build completed without producing {entrypoint}")
 
+    write_runtime_metadata(source_dir, runtime_metadata)
     return entrypoint
 
 
@@ -176,6 +188,67 @@ def git_commit_sha(source_root: Path) -> str | None:
 
 def relevant_files() -> list[str]:
     return ["package.json", "package-lock.json", "tsconfig.json", "src/mcp-entry.ts"]
+
+
+def runtime_metadata_path(source_dir: Path) -> Path:
+    return source_dir / ".qdrant-codebase-mcp-runtime.json"
+
+
+def resolve_runtime_metadata(node: str) -> RuntimeMetadata:
+    result = subprocess.run(
+        [
+            node,
+            "-p",
+            "JSON.stringify({nodeVersion:process.version,nodeModulesAbi:process.versions.modules ?? null,platform:process.platform,arch:process.arch})",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    return RuntimeMetadata(
+        node_version=payload["nodeVersion"],
+        node_modules_abi=payload["nodeModulesAbi"],
+        platform=payload["platform"],
+        arch=payload["arch"],
+    )
+
+
+def read_runtime_metadata(source_dir: Path) -> RuntimeMetadata | None:
+    metadata_path = runtime_metadata_path(source_dir)
+    if not metadata_path.exists():
+        return None
+
+    try:
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    required_keys = {"node_version", "node_modules_abi", "platform", "arch"}
+    if not isinstance(payload, dict) or not required_keys.issubset(payload):
+        return None
+
+    return RuntimeMetadata(
+        node_version=payload["node_version"],
+        node_modules_abi=payload["node_modules_abi"],
+        platform=payload["platform"],
+        arch=payload["arch"],
+    )
+
+
+def should_refresh_cached_runtime(source_dir: Path, current: RuntimeMetadata) -> bool:
+    if not (source_dir / "node_modules").exists():
+        return True
+
+    cached = read_runtime_metadata(source_dir)
+    return cached != current
+
+
+def write_runtime_metadata(source_dir: Path, metadata: RuntimeMetadata) -> None:
+    runtime_metadata_path(source_dir).write_text(
+        json.dumps(asdict(metadata), sort_keys=True),
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

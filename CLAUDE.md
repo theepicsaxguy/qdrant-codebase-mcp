@@ -127,3 +127,5 @@ Dry run: `DRY_RUN=1 ./scripts/publish.sh` or `./scripts/publish.sh --dry-run`
 - The watcher uses `awaitWriteFinish` AND a debounce — both use `watcherDebounceMs`. Total minimum latency before indexing starts after a save is ~2× the configured value
 
 Commit using conventional commits. Without attribution to a specific author. Always commit after each successful step.
+
+ALWAYS COMMIT YOUR CHANGES
