@@ -115,7 +115,7 @@ Dry run: `DRY_RUN=1 ./scripts/publish.sh` or `./scripts/publish.sh --dry-run`
 
 | Secret               | Used for                                              |
 | -------------------- | ----------------------------------------------------- |
-| `NPM_TOKEN`          | `npm publish` in release workflow                     |
+| `NPM_TOKEN`          | local/manual `npm publish` when not using trusted publishing |
 | `MCP_REGISTRY_TOKEN` | `mcp-publisher publish`                               |
 | `VSCE_TOKEN`         | VS Code Marketplace (once `vsce-extension/` is built) |
 
