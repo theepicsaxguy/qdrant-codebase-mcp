@@ -4,6 +4,7 @@ import { loadConfig } from './config/loader';
 import { bootstrap, startIndexing } from './bootstrap';
 import { createMcpServer } from './mcp/server';
 import { applyMcpRuntimeDefaults } from './mcp/runtime-defaults';
+import { registerStdioShutdown } from './mcp/shutdown';
 
 async function main(): Promise<void> {
   applyMcpRuntimeDefaults();
@@ -25,16 +26,9 @@ async function main(): Promise<void> {
   });
   const transport = new StdioServerTransport();
   await server.connect(transport);
-
-  const shutdown = async (): Promise<void> => {
-    await bundle.watcherManager.stopAll();
-    process.exitCode = 0;
-  };
-  process.on('SIGTERM', () => {
-    void shutdown();
-  });
-  process.on('SIGINT', () => {
-    void shutdown();
+  registerStdioShutdown({
+    server,
+    watcherManager: bundle.watcherManager,
   });
 }
 
