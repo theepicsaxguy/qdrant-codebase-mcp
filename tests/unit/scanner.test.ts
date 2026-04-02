@@ -12,20 +12,32 @@ const baseRepo: RepoConfig = {
   rootPath: '/tmp',
 };
 
+function withTempFile(
+  fileName: string,
+  content: Buffer | string,
+  run: (filePath: string) => void
+): void {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scanner-file-'));
+  const filePath = path.join(tempDir, fileName);
+  try {
+    fs.writeFileSync(filePath, content);
+    run(filePath);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
 describe('isBinaryFile', () => {
   it('returns false for text files', () => {
-    const tmp = path.join(os.tmpdir(), 'test-text.ts');
-    fs.writeFileSync(tmp, 'const x = 1;\n');
-    expect(isBinaryFile(tmp)).toBe(false);
-    fs.unlinkSync(tmp);
+    withTempFile('test-text.ts', 'const x = 1;\n', (filePath) => {
+      expect(isBinaryFile(filePath)).toBe(false);
+    });
   });
 
   it('returns true for file with null bytes', () => {
-    const tmp = path.join(os.tmpdir(), 'test-binary.bin');
-    const buf = Buffer.alloc(10, 0);
-    fs.writeFileSync(tmp, buf);
-    expect(isBinaryFile(tmp)).toBe(true);
-    fs.unlinkSync(tmp);
+    withTempFile('test-binary.bin', Buffer.alloc(10, 0), (filePath) => {
+      expect(isBinaryFile(filePath)).toBe(true);
+    });
   });
 
   it('returns true for non-existent file', () => {
