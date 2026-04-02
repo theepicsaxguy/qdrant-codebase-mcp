@@ -48,6 +48,7 @@
     "lint": "eslint src tests --max-warnings 0",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test": "vitest run tests/unit",
+    "test:python": "python3 -m unittest tests.test_uvx_launcher",
     "test:integration": "vitest run tests/integration",
     "test:all": "vitest run",
     "test:watch": "vitest tests/unit",

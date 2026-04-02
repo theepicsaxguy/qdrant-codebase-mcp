@@ -61,6 +61,20 @@ export class QdrantAdapter {
     this.log.info({ collection: this.collectionName }, 'Collection ready');
   }
 
+  async validateExistingCollection(): Promise<void> {
+    const info = await this.getCollectionInfo();
+    if (info === null) {
+      throw new Error(`Collection does not exist: ${this.collectionName}`);
+    }
+
+    const existingSize = readVectorSize(info.config.params.vectors);
+    if (existingSize !== 0 && existingSize !== this.vectorSize) {
+      throw new Error(
+        `Collection ${this.collectionName} has vector size ${existingSize}, expected ${this.vectorSize}`
+      );
+    }
+  }
+
   private async createCollection(): Promise<void> {
     await this.client.createCollection(this.collectionName, {
       vectors: { size: this.vectorSize, distance: 'Cosine', on_disk: true },

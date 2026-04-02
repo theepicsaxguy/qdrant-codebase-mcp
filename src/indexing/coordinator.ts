@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { QdrantAdapter } from '../qdrant/adapter';
-import type { EmbeddingAdapter } from '../embedding/adapter';
+import type { EmbeddingAdapter } from '../embedding/types';
 import { scanRepo } from '../scanner/scanner';
 import { chunkCode } from '../chunker/chunker';
 import { detectLanguage, normalizePath } from '../utils/hashing';
@@ -39,6 +39,9 @@ export class IndexingCoordinator {
     }
     const repo = this.config.repos.find((r) => r.repoId === repoId);
     if (!repo) throw new Error(`Unknown repoId: ${repoId}`);
+    if (!repo.rootPath) {
+      throw new Error(`Repo ${repoId} does not have a rootPath; indexing is unavailable`);
+    }
     const adapter = this.qdrantAdapters.get(repoId);
     if (!adapter) throw new Error(`No Qdrant adapter for repoId: ${repoId}`);
 
@@ -87,6 +90,10 @@ export class IndexingCoordinator {
   }
 
   async indexFile(absolutePath: string, repo: RepoConfig, adapter: QdrantAdapter): Promise<void> {
+    if (!repo.rootPath) {
+      throw new Error(`Repo ${repo.repoId} does not have a rootPath; indexing is unavailable`);
+    }
+
     const root = path.resolve(repo.rootPath);
     const relPath = normalizePath(path.relative(root, absolutePath));
     const language = detectLanguage(absolutePath);
@@ -147,6 +154,10 @@ export class IndexingCoordinator {
   }
 
   async deleteFile(absolutePath: string, repo: RepoConfig, adapter: QdrantAdapter): Promise<void> {
+    if (!repo.rootPath) {
+      throw new Error(`Repo ${repo.repoId} does not have a rootPath; indexing is unavailable`);
+    }
+
     const root = path.resolve(repo.rootPath);
     const relPath = normalizePath(path.relative(root, absolutePath));
     await adapter.deleteByFilePath(relPath);

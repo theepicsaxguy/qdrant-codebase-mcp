@@ -57,7 +57,9 @@ export function registerRepoRoutes(
     const repos = dependencies.config.repos.map((repo) => ({
       repoId: repo.repoId,
       collectionName: repo.collectionName,
-      rootPath: repo.rootPath,
+      rootPath: repo.rootPath ?? null,
+      serverMode: dependencies.config.serverMode,
+      embeddingProvider: dependencies.embedding.provider,
     }));
     reply.code(200).send({ repos });
   });
@@ -100,6 +102,8 @@ function registerRepoStatusRoute(server: FastifyInstance, dependencies: ServerDe
     reply.code(200).send({
       repoId: request.params.repoId,
       collectionName: repo.collectionName,
+      serverMode: dependencies.config.serverMode,
+      embeddingProvider: dependencies.embedding.provider,
       model: dependencies.embedding.modelName,
       vectorSize: dependencies.embedding.vectorSize,
       indexingInProgress: dependencies.coordinator.isIndexing(request.params.repoId),
@@ -114,6 +118,11 @@ function registerRepoIndexActionRoute(
   action: 'reindex' | 'rescan'
 ): void {
   server.post<{ Params: { repoId: string } }>(`/repos/:repoId/${action}`, (request, reply) => {
+    if (dependencies.config.serverMode === 'search-only') {
+      reply.code(400).send({ error: `${action} is unsupported when serverMode is search-only` });
+      return;
+    }
+
     const { repoId } = request.params;
     if (!dependencies.qdrantAdapters.has(repoId)) {
       reply.code(404).send({ error: `Unknown repoId: ${repoId}` });

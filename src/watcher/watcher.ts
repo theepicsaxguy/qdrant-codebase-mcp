@@ -38,6 +38,10 @@ export class FileWatcherManager {
 
   startAll(): void {
     for (const repo of this.config.repos) {
+      if (!repo.rootPath) {
+        continue;
+      }
+
       this.startWatcher(repo);
     }
   }
@@ -77,7 +81,8 @@ export class FileWatcherManager {
   }
 
   private createWatcher(repo: RepoConfig): FSWatcher {
-    return chokidar.watch(repo.rootPath, {
+    const rootPath = requireRootPath(repo);
+    return chokidar.watch(rootPath, {
       persistent: true,
       ignoreInitial: true,
       followSymlinks: false,
@@ -171,7 +176,7 @@ export class FileWatcherManager {
   }
 
   private isGitIgnoreFile(filePath: string, repo: RepoConfig): boolean {
-    const root = path.resolve(repo.rootPath);
+    const root = path.resolve(requireRootPath(repo));
     const absolutePath = path.resolve(filePath);
     if (!absolutePath.startsWith(root + path.sep) && absolutePath !== root) {
       return false;
@@ -182,6 +187,14 @@ export class FileWatcherManager {
   }
 
   private isTrackedFile(filePath: string, repo: RepoConfig): boolean {
-    return isIndexable(filePath, repo.rootPath, repo, this.config.maxFileSizeBytes);
+    return isIndexable(filePath, requireRootPath(repo), repo, this.config.maxFileSizeBytes);
   }
+}
+
+function requireRootPath(repo: RepoConfig): string {
+  if (repo.rootPath === undefined) {
+    throw new Error(`Repo ${repo.repoId} does not have a rootPath`);
+  }
+
+  return repo.rootPath;
 }

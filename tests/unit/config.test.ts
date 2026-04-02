@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AppConfigSchema } from '../../src/config/schema';
+import { AppConfigSchema, DEFAULT_FASTEMBED_MODEL } from '../../src/config/schema';
 
 describe('AppConfigSchema', () => {
   const validBase = {
@@ -34,7 +34,9 @@ describe('AppConfigSchema', () => {
     expect(result.data.chunkMaxLines).toBe(150);
     expect(result.data.chunkOverlapLines).toBe(20);
     expect(result.data.port).toBe(3000);
-    expect(result.data.embeddingModel).toBe('fast-bge-small-en-v1.5');
+    expect(result.data.embeddingModel).toBe(DEFAULT_FASTEMBED_MODEL);
+    expect(result.data.embeddingProvider).toBe('fastembed');
+    expect(result.data.serverMode).toBe('index-and-watch');
   });
 
   it('rejects repo without repoId', () => {
@@ -55,5 +57,49 @@ describe('AppConfigSchema', () => {
     expect(result.success).toBe(true);
     if (!result.success) throw new Error();
     expect(result.data.qdrantApiKey).toBe('secret');
+  });
+
+  it('requires openai-compatible settings when that provider is selected', () => {
+    const result = AppConfigSchema.safeParse({
+      ...validBase,
+      embeddingProvider: 'openai-compatible',
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts openai-compatible config when required settings are present', () => {
+    const result = AppConfigSchema.safeParse({
+      ...validBase,
+      embeddingProvider: 'openai-compatible',
+      embeddingBaseUrl: 'https://embeddings.example.com/v1',
+      embeddingModel: 'text-embedding-3-large',
+      embeddingApiKey: 'secret',
+      serverMode: 'search-only',
+      repos: [{ repoId: 'webdocuments', collectionName: 'webdocuments' }],
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error();
+    expect(result.data.serverMode).toBe('search-only');
+  });
+
+  it('requires rootPath when serverMode is index-and-watch', () => {
+    const result = AppConfigSchema.safeParse({
+      ...validBase,
+      repos: [{ repoId: 'missing-root', collectionName: 'collection' }],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('allows repos without rootPath when serverMode is search-only', () => {
+    const result = AppConfigSchema.safeParse({
+      ...validBase,
+      serverMode: 'search-only',
+      repos: [{ repoId: 'search-only', collectionName: 'search-only' }],
+    });
+
+    expect(result.success).toBe(true);
   });
 });

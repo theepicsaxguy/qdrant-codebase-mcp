@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-      time: "06:00"
+      time: '06:00'
       timezone: UTC
     open-pull-requests-limit: 5
     groups:
@@ -17,21 +17,21 @@ updates:
           - patch
     ignore:
       # Major updates need manual review
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     labels:
       - dependencies
     commit-message:
-      prefix: "chore(deps)"
+      prefix: 'chore(deps)'
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
-      time: "06:00"
+      time: '06:00'
       timezone: UTC
     commit-message:
-      prefix: "ci"
+      prefix: 'ci'
     labels:
       - dependencies

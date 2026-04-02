@@ -84,6 +84,19 @@ QDRANT_URL=http://localhost:6333 npx qdrant-codebase-mcp
 
 The server will connect to Qdrant, create a collection, index your code, start watching for changes, and serve MCP over stdio — all in one command.
 
+### Install from source with `uvx`
+
+If you want to run directly from GitHub source instead of the published npm package:
+
+```bash
+QDRANT_URL=http://localhost:6333 \
+ROOT_PATH=/path/to/your/project \
+uvx --from git+https://github.com/theepicsaxguy/qdrant-codebase-mcp qdrant-codebase-mcp
+```
+
+The `uvx` launcher clones the Git source, builds the Node server once per commit in a cache directory, and then runs `dist/mcp-entry.js` with your current environment.
+`node` and `npm` still need to be available on your `PATH`.
+
 **One-click install into VS Code:**
 
 [Install in VS Code](vscode:mcp/install?%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22qdrant-codebase-mcp%22%5D%7D)
@@ -91,6 +104,10 @@ The server will connect to Qdrant, create a collection, index your code, start w
 ---
 
 ## MCP client setup
+
+If you have multiple existing Qdrant collections built with different embedding models, configure **multiple MCP server entries**.
+Each server process should point at exactly one embedding provider/model combination.
+Do not mix different embedding spaces inside one server instance.
 
 ### VS Code (GitHub Copilot / Roo Code)
 
@@ -110,6 +127,12 @@ Add to `.vscode/mcp.json` in your workspace:
       "id": "qdrantApiKey",
       "description": "Qdrant API key (leave empty for local instances)",
       "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "embeddingApiKey",
+      "description": "Embedding API key for OpenAI-compatible backends",
+      "password": true
     }
   ],
   "servers": {
@@ -122,10 +145,32 @@ Add to `.vscode/mcp.json` in your workspace:
         "QDRANT_API_KEY": "${input:qdrantApiKey}",
         "ROOT_PATH": "${workspaceFolder}"
       }
+    },
+    "webdocuments-search": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/theepicsaxguy/qdrant-codebase-mcp",
+        "qdrant-codebase-mcp"
+      ],
+      "env": {
+        "QDRANT_URL": "${input:qdrantUrl}",
+        "QDRANT_API_KEY": "${input:qdrantApiKey}",
+        "SERVER_MODE": "search-only",
+        "REPO_ID": "webdocuments",
+        "COLLECTION_NAME": "webdocuments",
+        "EMBEDDING_PROVIDER": "openai-compatible",
+        "EMBEDDING_BASE_URL": "https://your-openai-compatible-endpoint/v1",
+        "EMBEDDING_API_KEY": "${input:embeddingApiKey}",
+        "EMBEDDING_MODEL": "text-embedding-3-large"
+      }
     }
   }
 }
 ```
+
+Use the same pattern to add `webdocuments-2`, `tickets-search`, or any other dedicated index. One collection/model pair should map to one MCP server entry.
 
 ### Claude Desktop
 
@@ -195,12 +240,12 @@ claude mcp add qdrant-codebase-mcp \
 
 ## MCP tools
 
-| Tool | Input | What it returns |
-|---|---|---|
-| `search_code` | `query`, optional: `repoId`, `language`, `directoryPrefix`, `limit`, `minScore` | Ranked code chunks with file path, line range, language, similarity score |
-| `list_repos` | — | All configured repos with collection name and root path |
-| `get_repo_status` | `repoId` | Indexing state, timestamps, last error, embedding model info |
-| `trigger_reindex` | `repoId` | Kicks off a full re-index in the background, returns immediately |
+| Tool              | Input                                                                           | What it returns                                                           |
+| ----------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `search_code`     | `query`, optional: `repoId`, `language`, `directoryPrefix`, `limit`, `minScore` | Ranked code chunks with file path, line range, language, similarity score |
+| `list_repos`      | —                                                                               | All configured repos with collection name, mode, and root path            |
+| `get_repo_status` | `repoId`                                                                        | Indexing state, timestamps, server mode, embedding provider/model info    |
+| `trigger_reindex` | `repoId`                                                                        | Kicks off a full re-index in the background; unsupported in `search-only` |
 
 **Example — finding code by concept:**
 
@@ -226,27 +271,36 @@ export async function validateJwt(token: string): Promise<JwtPayload> {
 
 All settings are via **environment variables** or an optional `config.yml`.
 
-| Variable | Default | Description |
-|---|---|---|
-| `QDRANT_URL` | `http://localhost:6333` | Qdrant server URL |
-| `QDRANT_API_KEY` | — | Qdrant API key (required for Qdrant Cloud) |
-| `ROOT_PATH` | `process.cwd()` | Repository root to index |
-| `COLLECTION_NAME` | `<folder>-<hash>` | Qdrant collection (auto-generated) |
-| `REPO_ID` | folder name | Logical name shown in MCP tools |
-| `EMBEDDING_MODEL` | `fast-bge-small-en-v1.5` | FastEmbed model |
-| `EMBEDDING_BATCH_SIZE` | `64` | Chunks per embedding batch |
-| `CHUNK_MAX_LINES` | `150` | Max lines per code chunk |
-| `CHUNK_OVERLAP_LINES` | `20` | Overlap between adjacent chunks |
-| `MAX_FILE_SIZE_BYTES` | `1000000` | Files larger than this are skipped |
-| `WATCHER_DEBOUNCE_MS` | `2000` | Quiet period after a save before re-indexing |
-| `PORT` | `3000` | HTTP health/metrics port |
-| `CONFIG_PATH` | — | Path to a `config.yml` for multi-repo setups |
+| Variable               | Default                  | Description                                       |
+| ---------------------- | ------------------------ | ------------------------------------------------- |
+| `QDRANT_URL`           | `http://localhost:6333`  | Qdrant server URL                                 |
+| `QDRANT_API_KEY`       | —                        | Qdrant API key (required for Qdrant Cloud)        |
+| `SERVER_MODE`          | `index-and-watch`        | `index-and-watch` or `search-only`                |
+| `ROOT_PATH`            | `process.cwd()`          | Repository root to index (`index-and-watch` only) |
+| `COLLECTION_NAME`      | `<folder>-<hash>`        | Qdrant collection; required in `search-only`      |
+| `REPO_ID`              | folder name              | Logical name shown in MCP tools                   |
+| `EMBEDDING_PROVIDER`   | `fastembed`             | `fastembed` or `openai-compatible`                |
+| `EMBEDDING_MODEL`      | `fast-bge-small-en-v1.5` | Embedding model name                              |
+| `EMBEDDING_BASE_URL`   | —                        | OpenAI-compatible embeddings base URL             |
+| `EMBEDDING_API_KEY`    | —                        | OpenAI-compatible embeddings API key              |
+| `EMBEDDING_DIMENSIONS` | —                        | Optional explicit embedding vector size           |
+| `EMBEDDING_HEADERS_JSON` | —                      | Optional JSON object of extra embedding headers   |
+| `EMBEDDING_BATCH_SIZE` | `64`                     | Chunks per embedding batch                        |
+| `CHUNK_MAX_LINES`      | `150`                    | Max lines per code chunk                          |
+| `CHUNK_OVERLAP_LINES`  | `20`                     | Overlap between adjacent chunks                   |
+| `MAX_FILE_SIZE_BYTES`  | `1000000`                | Files larger than this are skipped                |
+| `WATCHER_DEBOUNCE_MS`  | `2000`                   | Quiet period after a save before re-indexing      |
+| `MIN_SCORE`            | `0.78`                   | Minimum similarity score for search results (0-1) |
+| `PORT`                 | `3000`                   | HTTP health/metrics port                          |
+| `CONFIG_PATH`          | —                        | Path to a `config.yml` for multi-repo setups      |
 
 ### Multi-repo config.yml
 
 ```yaml
 qdrantUrl: https://your-cluster.qdrant.tech
 qdrantApiKey: your-api-key
+serverMode: index-and-watch
+embeddingProvider: fastembed
 embeddingModel: fast-bge-small-en-v1.5
 chunkMaxLines: 150
 chunkOverlapLines: 20
@@ -261,13 +315,33 @@ repos:
     collectionName: frontend-code
 ```
 
+### Dedicated search-only config.yml
+
+Use this mode when the collection already exists in Qdrant and was embedded with an OpenAI-compatible model.
+
+```yaml
+qdrantUrl: https://your-cluster.qdrant.tech
+qdrantApiKey: your-api-key
+serverMode: search-only
+embeddingProvider: openai-compatible
+embeddingBaseUrl: https://your-openai-compatible-endpoint/v1
+embeddingApiKey: your-embedding-api-key
+embeddingModel: text-embedding-3-large
+
+repos:
+  - repoId: webdocuments
+    collectionName: webdocuments
+```
+
+If you have five dedicated indexes using five different embedding models, run five MCP server entries in your client config. Each entry should set its own `REPO_ID`, `COLLECTION_NAME`, `EMBEDDING_BASE_URL`, and `EMBEDDING_MODEL`.
+
 ### Supported embedding models
 
-| Model | Dimensions | Notes |
-|---|---|---|
-| `fast-bge-small-en-v1.5` | 384 | Default — fast, low memory |
-| `fast-bge-base-en-v1.5` | 768 | Better recall, more memory |
-| `multilingual-e5-large` | 1024 | Multi-language codebases |
+| Model                    | Dimensions | Notes                      |
+| ------------------------ | ---------- | -------------------------- |
+| `fast-bge-small-en-v1.5` | 384        | Default — fast, low memory |
+| `fast-bge-base-en-v1.5`  | 768        | Better recall, more memory |
+| `multilingual-e5-large`  | 1024       | Multi-language codebases   |
 
 ---
 
@@ -275,14 +349,14 @@ repos:
 
 The service also exposes a REST API (default port 3000):
 
-| Endpoint | Description |
-|---|---|
-| `GET /health` | `{"status":"ok"}` when ready |
-| `GET /metrics` | Prometheus metrics |
-| `GET /repos` | List all indexed repos |
-| `GET /repos/:id/status` | Indexing status for a repo |
-| `POST /repos/:id/search` | REST search (same as MCP `search_code`) |
-| `POST /repos/:id/reindex` | Trigger a full re-index |
+| Endpoint                  | Description                             |
+| ------------------------- | --------------------------------------- |
+| `GET /health`             | `{"status":"ok"}` when ready            |
+| `GET /metrics`            | Prometheus metrics                      |
+| `GET /repos`              | List all indexed repos                  |
+| `GET /repos/:id/status`   | Indexing status for a repo              |
+| `POST /repos/:id/search`  | REST search (same as MCP `search_code`) |
+| `POST /repos/:id/reindex` | Trigger a full re-index                 |
 
 ---
 
@@ -302,8 +376,8 @@ npx qdrant-codebase-mcp
              ┌────────────────────────────────────────────┐
              │                                            │
              │  EmbeddingAdapter                          │
-             │  └─ FastEmbed BGE-Small-EN (384-dim)       │
-             │     runs locally, no API calls             │
+             │  └─ FastEmbed or OpenAI-compatible         │
+             │     one provider/model per server process  │
              │                                            │
              │  QdrantAdapter (per repo)                  │
              │  └─ collection lifecycle + upsert/search   │
@@ -314,6 +388,7 @@ npx qdrant-codebase-mcp
              │                                            │
              │  FileWatcherManager                        │
              │  └─ chokidar + per-file debounce           │
+             │     skipped in search-only mode            │
              │                                            │
              │  SearchService                             │
              │  └─ embed query → ANN search → rank        │
@@ -375,6 +450,28 @@ claude mcp add qdrant-codebase-mcp-dev \
 QDRANT_URL=http://localhost:6333 \
 ROOT_PATH=/path/to/your/project \
 npx tsx src/mcp-entry.ts
+```
+
+### Source install with `uvx`
+
+For a source install without cloning the repo manually:
+
+```bash
+uvx --from git+https://github.com/theepicsaxguy/qdrant-codebase-mcp qdrant-codebase-mcp
+```
+
+For dedicated external indexes, add environment variables in your client config:
+
+```json
+{
+  "SERVER_MODE": "search-only",
+  "REPO_ID": "webdocuments",
+  "COLLECTION_NAME": "webdocuments",
+  "EMBEDDING_PROVIDER": "openai-compatible",
+  "EMBEDDING_BASE_URL": "https://your-openai-compatible-endpoint/v1",
+  "EMBEDDING_API_KEY": "your-embedding-api-key",
+  "EMBEDDING_MODEL": "text-embedding-3-large"
+}
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor guide including commit conventions, changeset requirements, and the release process.

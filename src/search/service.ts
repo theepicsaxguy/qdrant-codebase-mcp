@@ -1,5 +1,5 @@
 import type { QdrantAdapter } from '../qdrant/adapter';
-import type { EmbeddingAdapter } from '../embedding/adapter';
+import type { EmbeddingAdapter } from '../embedding/types';
 import { logger } from '../logger';
 import { searchRequestsTotal, searchLatencySeconds } from '../metrics';
 import type { SearchRequest, SearchResponse } from '../types';
@@ -9,9 +9,16 @@ export class SearchService {
   private readonly embedding: EmbeddingAdapter;
   private readonly log = logger.child({ component: 'SearchService' });
 
-  constructor(qdrantAdapters: Map<string, QdrantAdapter>, embedding: EmbeddingAdapter) {
+  private readonly minScore: number;
+
+  constructor(
+    qdrantAdapters: Map<string, QdrantAdapter>,
+    embedding: EmbeddingAdapter,
+    minScore = 0.8
+  ) {
     this.qdrantAdapters = qdrantAdapters;
     this.embedding = embedding;
+    this.minScore = minScore;
   }
 
   async search(req: SearchRequest): Promise<SearchResponse> {
@@ -20,9 +27,11 @@ export class SearchService {
 
     try {
       const queryVector = await this.embedding.embedQuery(req.query);
+      // If minScore is not set in the request, use the config default
+      const reqWithScore = { ...req, minScore: req.minScore ?? this.minScore };
       const results = repoId
-        ? await this.searchSingleRepo(repoId, req, queryVector)
-        : await this.searchAcrossRepos(req, queryVector);
+        ? await this.searchSingleRepo(repoId, reqWithScore, queryVector)
+        : await this.searchAcrossRepos(reqWithScore, queryVector);
       return { results };
     } catch (err) {
       searchRequestsTotal.inc({ repo_id: repoId ?? 'global', status: 'error' });
