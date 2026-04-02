@@ -77,6 +77,35 @@ describe('QdrantAdapter.upsertChunks — vector validation', () => {
     ];
     expect(Array.isArray(points[0]?.vector)).toBe(true);
   });
+
+  it('recreates the collection and retries when upsert sees a missing-collection 404', async () => {
+    const point = validPoint('aaaaaaaa-0000-0000-0000-000000000007');
+    const adapter = makeAdapter();
+    const client = (
+      adapter as unknown as {
+        client: {
+          upsert: ReturnType<typeof vi.fn>;
+          getCollection: ReturnType<typeof vi.fn>;
+          createCollection: ReturnType<typeof vi.fn>;
+          createPayloadIndex: ReturnType<typeof vi.fn>;
+        };
+      }
+    ).client;
+
+    client.upsert
+      .mockRejectedValueOnce({
+        status: 404,
+        message: "Not found: Collection `test-collection` doesn't exist!",
+      })
+      .mockResolvedValueOnce({});
+    client.getCollection.mockResolvedValueOnce(null);
+
+    await expect(adapter.upsertChunks([point])).resolves.not.toThrow();
+
+    expect(client.createCollection).toHaveBeenCalledOnce();
+    expect(client.createPayloadIndex).toHaveBeenCalled();
+    expect(client.upsert).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('QdrantAdapter.validateExistingCollection', () => {

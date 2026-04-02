@@ -60,7 +60,7 @@ describe('startIndexing', () => {
     expect(coordinator.fullIndex).not.toHaveBeenCalled();
   });
 
-  it('starts watchers and queues initial indexing in index-and-watch mode', () => {
+  it('starts watchers after initial indexing settles in index-and-watch mode', async () => {
     const watcherManager = { startAll: vi.fn() };
     const coordinator = {
       fullIndex: vi.fn().mockReturnValue(Promise.resolve()),
@@ -75,9 +75,13 @@ describe('startIndexing', () => {
       watcherManager: watcherManager as never,
     });
 
-    expect(watcherManager.startAll).toHaveBeenCalledOnce();
+    expect(watcherManager.startAll).not.toHaveBeenCalled();
     expect(coordinator.fullIndex).toHaveBeenCalledTimes(2);
     expect(coordinator.fullIndex).toHaveBeenNthCalledWith(1, 'repo-a');
     expect(coordinator.fullIndex).toHaveBeenNthCalledWith(2, 'repo-b');
+
+    await vi.waitFor(() => {
+      expect(watcherManager.startAll).toHaveBeenCalledOnce();
+    });
   });
 });

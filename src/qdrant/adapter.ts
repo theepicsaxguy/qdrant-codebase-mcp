@@ -1,10 +1,9 @@
-import { QdrantClient, type Schemas } from '@qdrant/js-client-rest';
+import type { QdrantClient, Schemas } from '@qdrant/js-client-rest';
 import { logger } from '../logger';
 import { buildPathSegments } from '../utils/hashing';
 import type { IndexingStatus, QdrantPoint, SearchResult } from '../types';
 import {
   buildDeleteFilter,
-  buildPort,
   buildSearchFilter,
   ensurePayloadIndexes,
   mapSearchPoint,
@@ -16,6 +15,8 @@ import {
   toIndexingStatus,
   validatePointVectors,
 } from './adapter.helpers';
+import { createQdrantClient } from './client.helpers';
+import { upsertWithRecovery } from './upsert.helpers';
 
 export interface QdrantSearchParams {
   queryVector: number[];
@@ -33,20 +34,7 @@ export class QdrantAdapter {
   constructor(qdrantUrl: string, collectionName: string, vectorSize: number, apiKey?: string) {
     this.collectionName = collectionName;
     this.vectorSize = vectorSize;
-    try {
-      const u = new URL(qdrantUrl);
-      const port = buildPort(u);
-      this.client = new QdrantClient({
-        host: u.hostname,
-        port,
-        https: u.protocol === 'https:',
-        prefix: u.pathname === '/' ? undefined : u.pathname.replace(/\/+$/, ''),
-        apiKey,
-        headers: { 'User-Agent': 'qdrant-codebase-mcp' },
-      });
-    } catch {
-      this.client = new QdrantClient({ url: qdrantUrl, apiKey });
-    }
+    this.client = createQdrantClient(qdrantUrl, apiKey);
   }
 
   async initialize(): Promise<void> {
@@ -66,7 +54,6 @@ export class QdrantAdapter {
     if (info === null) {
       throw new Error(`Collection does not exist: ${this.collectionName}`);
     }
-
     const existingSize = readVectorSize(info.config.params.vectors);
     if (existingSize !== 0 && existingSize !== this.vectorSize) {
       throw new Error(
@@ -86,6 +73,7 @@ export class QdrantAdapter {
   ): Promise<void> {
     const existingSize = readVectorSize(info.config.params.vectors);
     if (existingSize === 0 || existingSize === this.vectorSize) return;
+
     this.log.warn(
       { existing: existingSize, expected: this.vectorSize },
       'Vector dimension mismatch — recreating'
@@ -102,7 +90,15 @@ export class QdrantAdapter {
       vector: normalizeVector(p.vector),
       payload: { ...p.payload, pathSegments: buildPathSegments(p.payload.filePath) },
     }));
-    await this.client.upsert(this.collectionName, { points: processed, wait: true });
+    await upsertWithRecovery({
+      client: this.client,
+      collectionName: this.collectionName,
+      points: processed,
+      log: this.log,
+      initialize: async () => {
+        await this.initialize();
+      },
+    });
   }
 
   async deleteByFilePath(filePath: string): Promise<void> {
@@ -119,35 +115,30 @@ export class QdrantAdapter {
   }
 
   async deleteCollection(): Promise<void> {
-    if (await this.collectionExists()) {
-      await this.client.deleteCollection(this.collectionName);
-      this.log.info({ collection: this.collectionName }, 'Collection deleted');
-    }
+    if (!(await this.collectionExists())) return;
+    await this.client.deleteCollection(this.collectionName);
+    this.log.info({ collection: this.collectionName }, 'Collection deleted');
   }
   async markIndexingIncomplete(startedAt: number): Promise<void> {
-    await this.writeMetadata({
-      indexing_complete: false,
-      started_at: startedAt,
-      completed_at: null,
-      last_error: null,
-    });
+    await this.writeIndexingStatus(startedAt, false, null, null);
   }
-
   async markIndexingComplete(startedAt: number): Promise<void> {
-    await this.writeMetadata({
-      indexing_complete: true,
-      started_at: startedAt,
-      completed_at: Date.now(),
-      last_error: null,
-    });
+    await this.writeIndexingStatus(startedAt, true, Date.now(), null);
   }
-
   async markIndexingFailed(startedAt: number, error: string): Promise<void> {
+    await this.writeIndexingStatus(startedAt, false, Date.now(), error);
+  }
+  private async writeIndexingStatus(
+    startedAt: number,
+    indexingComplete: boolean,
+    completedAt: number | null,
+    lastError: string | null
+  ): Promise<void> {
     await this.writeMetadata({
-      indexing_complete: false,
+      indexing_complete: indexingComplete,
       started_at: startedAt,
-      completed_at: Date.now(),
-      last_error: error,
+      completed_at: completedAt,
+      last_error: lastError,
     });
   }
 
@@ -157,7 +148,6 @@ export class QdrantAdapter {
       wait: true,
     });
   }
-
   async getIndexingStatus(): Promise<IndexingStatus | null> {
     if (!(await this.collectionExists())) return null;
     try {
@@ -173,7 +163,6 @@ export class QdrantAdapter {
       return null;
     }
   }
-
   async search(params: QdrantSearchParams): Promise<SearchResult[]> {
     const { queryVector, limit = 10, minScore = 0.45 } = params;
     const filter = buildSearchFilter(params);
@@ -193,11 +182,9 @@ export class QdrantAdapter {
       return mapped === null ? [] : [mapped];
     });
   }
-
   async collectionExists(): Promise<boolean> {
     return (await this.getCollectionInfo()) !== null;
   }
-
   private async getCollectionInfo(): Promise<Awaited<
     ReturnType<QdrantClient['getCollection']>
   > | null> {
@@ -207,7 +194,6 @@ export class QdrantAdapter {
       return null;
     }
   }
-
   async ping(): Promise<void> {
     await this.client.getCollections();
   }

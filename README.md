@@ -94,8 +94,18 @@ ROOT_PATH=/path/to/your/project \
 uvx --from git+https://github.com/theepicsaxguy/qdrant-codebase-mcp qdrant-codebase-mcp
 ```
 
+For Qdrant Cloud or any authenticated endpoint, pass the API key the same way:
+
+```bash
+QDRANT_URL=https://your-cluster.qdrant.tech \
+QDRANT_API_KEY=your-qdrant-api-key \
+ROOT_PATH=/path/to/your/project \
+uvx --from git+https://github.com/theepicsaxguy/qdrant-codebase-mcp qdrant-codebase-mcp
+```
+
 The `uvx` launcher clones the Git source, builds the Node server once per commit in a cache directory, and then runs `dist/mcp-entry.js` with your current environment.
 `node` and `npm` still need to be available on your `PATH`.
+If you prefer config files, set `CONFIG_PATH=/absolute/path/to/config.yml`; environment variables still take precedence over values inside that file.
 
 **One-click install into VS Code:**
 
@@ -270,6 +280,7 @@ export async function validateJwt(token: string): Promise<JwtPayload> {
 ## Configuration
 
 All settings are via **environment variables** or an optional `config.yml`.
+Precedence is: **environment variables -> `config.yml` -> built-in defaults**.
 
 | Variable               | Default                  | Description                                       |
 | ---------------------- | ------------------------ | ------------------------------------------------- |
@@ -452,6 +463,15 @@ ROOT_PATH=/path/to/your/project \
 npx tsx src/mcp-entry.ts
 ```
 
+If the source run targets Qdrant Cloud, include `QDRANT_API_KEY` or point `CONFIG_PATH` at a config file that contains `qdrantApiKey`:
+
+```bash
+QDRANT_URL=https://your-cluster.qdrant.tech \
+QDRANT_API_KEY=your-qdrant-api-key \
+ROOT_PATH=/path/to/your/project \
+npx tsx src/mcp-entry.ts
+```
+
 ### Source install with `uvx`
 
 For a source install without cloning the repo manually:
@@ -459,6 +479,17 @@ For a source install without cloning the repo manually:
 ```bash
 uvx --from git+https://github.com/theepicsaxguy/qdrant-codebase-mcp qdrant-codebase-mcp
 ```
+
+For authenticated Qdrant instances:
+
+```bash
+QDRANT_URL=https://your-cluster.qdrant.tech \
+QDRANT_API_KEY=your-qdrant-api-key \
+ROOT_PATH=/path/to/your/project \
+uvx --from git+https://github.com/theepicsaxguy/qdrant-codebase-mcp qdrant-codebase-mcp
+```
+
+If you see `authentication failed. Set QDRANT_API_KEY or qdrantApiKey in config.`, the server started correctly but the Qdrant connection is missing credentials. Pass `QDRANT_API_KEY` in the client `env` block or run with `CONFIG_PATH=/absolute/path/to/config.yml`.
 
 For dedicated external indexes, add environment variables in your client config:
 
@@ -474,6 +505,12 @@ For dedicated external indexes, add environment variables in your client config:
 }
 ```
 
+### Security note on `npm audit`
+
+Current installs may report one high-severity advisory in transitive `lodash@4.17.23`.
+In this repository that package is pulled in through `secretlint`, which is only used by the linting toolchain and pre-commit workflow, not by the published server runtime.
+That still merits dependency hygiene, but it is a much lower risk than a vulnerability in the production dependency graph that handles MCP requests or Qdrant traffic.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor guide including commit conventions, changeset requirements, and the release process.
 
 ---
@@ -481,3 +518,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor guide including 
 ## License
 
 [MIT](LICENSE)
+
+
+test
