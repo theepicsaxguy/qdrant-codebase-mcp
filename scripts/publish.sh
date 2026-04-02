@@ -7,10 +7,11 @@
 #   DRY_RUN=1 ./scripts/publish.sh
 #
 # Required env vars:
-#   NPM_TOKEN          — npm automation token
 #   MCP_REGISTRY_TOKEN — token from registry.modelcontextprotocol.io
 #   VSCE_TOKEN         — Azure DevOps PAT for VS Code Marketplace
 #                        (only required when vsce-extension/ exists)
+#   NPM_TOKEN          — only required for local/manual npm publishes when
+#                        trusted publishing is not available
 #
 # The VS Code extension lives in vsce-extension/ and is published separately
 # from the npm package. If that directory doesn't exist, that step is skipped.
@@ -33,10 +34,19 @@ warn()    { echo -e "${YELLOW}[publish]${NC} $*"; }
 error()   { echo -e "${RED}[publish]${NC} $*" >&2; }
 section() { echo -e "\n${BLUE}── $* ──${NC}"; }
 
+uses_trusted_publishing() {
+  [ "$CI_MODE" = "1" ] &&
+  [ "${GITHUB_ACTIONS:-}" = "true" ] &&
+  [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]
+}
+
 # ── Token guards (skipped in dry-run — no actual publish happens) ───────────
 if [ "$DRY_RUN" = "0" ]; then
-  [ -z "${NPM_TOKEN:-}"          ] && { error "NPM_TOKEN is not set.";          exit 1; }
   [ -z "${MCP_REGISTRY_TOKEN:-}" ] && { error "MCP_REGISTRY_TOKEN is not set."; exit 1; }
+  if ! uses_trusted_publishing && [ -z "${NPM_TOKEN:-}" ]; then
+    error "NPM_TOKEN is not set and trusted publishing is unavailable."
+    exit 1
+  fi
 fi
 
 VSCE_EXTENSION_DIR="vsce-extension"
@@ -122,7 +132,13 @@ node -e "
 # ═══════════════════════════════════════════════════════════════════════════
 section "Platform 1 of 3 — npm  (npx ${PACKAGE})"
 # ═══════════════════════════════════════════════════════════════════════════
-NPM_TOKEN="$NPM_TOKEN" npm publish --access public --provenance
+if uses_trusted_publishing; then
+  info "Publishing to npm with trusted publishing via GitHub Actions OIDC."
+  npm publish --access public --provenance
+else
+  info "Publishing to npm with token-based authentication."
+  NPM_TOKEN="$NPM_TOKEN" npm publish --access public --provenance
+fi
 info "npm publish complete."
 
 # Tag the release so other jobs/steps can reference the exact commit
