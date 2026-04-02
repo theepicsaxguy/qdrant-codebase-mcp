@@ -118,6 +118,9 @@ def prepare_local_copy(source_root: Path, source_dir: Path) -> Path:
 
 
 def prepare_git_checkout(source_dir: Path, source: SourceMetadata) -> Path:
+    if source.url is None:
+        raise RuntimeError("Git checkout requires a source URL")
+
     if not (source_dir / ".git").exists():
         source_dir.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "clone", source.url, str(source_dir)], check=True)
