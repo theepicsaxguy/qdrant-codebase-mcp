@@ -80,7 +80,7 @@
     "fast-glob": "^3.3.3",
     "fastembed": "^2.1.0",
     "fastify": "^5.8.4",
-    "js-yaml": "^4.1.1",
+    "js-yaml": "^4.2.0",
     "micromatch": "^4.0.8",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
